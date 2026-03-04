@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MemoryCraft - Memory Mode</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      min-height: 100vh;
+      background: #eaf7ff;
+    }
+
+    header {
+      position: relative;
+      padding: 16px 20px;
+      background: #39a845;
+      border-bottom: 2px solid #000;
+    }
+
+    h1 {
+      margin: 0;
+      color: #fff;
+      font-weight: 700;
+      padding-left: 44px;
+      padding-right: 44px;
+      text-shadow:
+        -2px -2px 0 #000,
+        2px -2px 0 #000,
+        -2px 2px 0 #000,
+        2px 2px 0 #000;
+    }
+
+    .icon-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      color: #000;
+      border: 2px solid #000;
+      border-radius: 6px;
+      background: #fff;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    .icon-btn:hover {
+      background: #f2f2f2;
+    }
+
+    .back-link {
+      left: 12px;
+    }
+
+    .settings-btn {
+      right: 12px;
+      width: 36px;
+      height: 36px;
+    }
+
+    .settings-btn svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .settings-overlay {
+      position: fixed;
+      inset: 0;
+      background: #00000066;
+    }
+
+    .settings-box {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: min(460px, calc(100vw - 32px));
+      background: #fff;
+      border: 2px solid #000;
+      border-radius: 10px;
+      padding: 22px;
+      box-shadow: 0 10px 30px #00000040;
+      color: #111;
+    }
+
+    .settings-box h2 {
+      margin: 0 0 10px;
+      font-size: 1.2rem;
+    }
+
+    .settings-box p {
+      margin: 0 0 14px;
+    }
+
+    .close-settings {
+      border: 2px solid #000;
+      background: #fff;
+      color: #111;
+      padding: 8px 12px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      border-radius: 8px;
+    }
+
+    main {
+      max-width: 760px;
+      margin: 24px auto;
+      padding: 0 20px;
+    }
+
+    .game-panel {
+      padding: 0;
+    }
+
+    .guess-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    #mob-input {
+      flex: 1 1 260px;
+      min-height: 48px;
+      border: 2px solid #000;
+      border-radius: 8px;
+      background: #fff;
+      padding: 10px 12px;
+      font: inherit;
+    }
+
+    #submit-guess {
+      min-height: 48px;
+      border: 2px solid #000;
+      border-radius: 8px;
+      padding: 10px 14px;
+      background: #39a845;
+      color: #fff;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    #guess-message {
+      margin: 12px 0 0;
+      font-weight: 700;
+      min-height: 1.3em;
+    }
+
+    .mob-board {
+      margin-top: 16px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .mob-row {
+      display: grid;
+      grid-template-columns: 28px 1fr 58px;
+      gap: 8px;
+      align-items: center;
+      min-height: 62px;
+      padding: 6px 8px;
+      border: 2px solid #000;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .mob-num {
+      font-weight: 700;
+      color: #666;
+      text-align: center;
+    }
+
+    .mob-name {
+      min-height: 1.2em;
+      font-weight: 700;
+    }
+
+    .mob-row:not(.guessed) .mob-name {
+      color: transparent;
+      user-select: none;
+    }
+
+    .mob-sprite {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+      justify-self: end;
+      opacity: 0;
+    }
+
+    .mob-row.guessed .mob-sprite {
+      opacity: 1;
+    }
+
+  </style>
+</head>
+<body>
+  <header>
+    <a class="icon-btn back-link" href="index.html" aria-label="Back to home">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M14.5 5L7.5 12L14.5 19" stroke="currentColor" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+    <button id="settings-btn" class="icon-btn settings-btn" type="button" aria-label="Open settings">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 8.5A3.5 3.5 0 1 0 12 15.5A3.5 3.5 0 1 0 12 8.5Z" stroke="currentColor" stroke-width="2"/>
+        <path d="M4 13V11L6.1 10.3C6.3 9.7 6.5 9.2 6.9 8.7L5.9 6.7L7.3 5.3L9.3 6.3C9.8 5.9 10.3 5.7 10.9 5.5L11.6 3.5H13.6L14.3 5.5C14.9 5.7 15.4 5.9 15.9 6.3L17.9 5.3L19.3 6.7L18.3 8.7C18.7 9.2 18.9 9.7 19.1 10.3L21.2 11V13L19.1 13.7C18.9 14.3 18.7 14.8 18.3 15.3L19.3 17.3L17.9 18.7L15.9 17.7C15.4 18.1 14.9 18.3 14.3 18.5L13.6 20.5H11.6L10.9 18.5C10.3 18.3 9.8 18.1 9.3 17.7L7.3 18.7L5.9 17.3L6.9 15.3C6.5 14.8 6.3 14.3 6.1 13.7L4 13Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <h1>Memory Mode</h1>
+  </header>
+  <div id="settings-overlay" class="settings-overlay" hidden></div>
+  <div id="settings-box" class="settings-box" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
+    <h2 id="settings-title">Settings</h2>
+    <p>Settings options coming soon.</p>
+    <button id="close-settings" class="close-settings" type="button">Close</button>
+  </div>
+  <main>
+    <section class="game-panel">
+      <div class="guess-row">
+        <input id="mob-input" type="text" placeholder="Type mob name" autocomplete="off" />
+        <button id="submit-guess" type="button">Submit</button>
+      </div>
+      <p id="guess-message"></p>
+      <div id="mob-board" class="mob-board"></div>
+    </section>
+  </main>
+  <script>
+    const settingsBtn = document.getElementById("settings-btn");
+    const closeSettingsBtn = document.getElementById("close-settings");
+    const overlay = document.getElementById("settings-overlay");
+    const box = document.getElementById("settings-box");
+    const mobInput = document.getElementById("mob-input");
+    const submitGuess = document.getElementById("submit-guess");
+    const guessMessage = document.getElementById("guess-message");
+    const mobBoard = document.getElementById("mob-board");
+
+    const MOB_HEAD_BASE = "https://mc-heads.net/head";
+    const SOUND_BASE = "https://mcasset.cloud/1.20.4/assets/minecraft/sounds/entity";
+    const mobs = [
+      { name: "allay", head: "allay", soundFolder: "allay" },
+      { name: "armadillo", head: "armadillo", soundFolder: "armadillo" },
+      { name: "axolotl", head: "axolotl", soundFolder: "axolotl" },
+      { name: "bat", head: "bat", soundFolder: "bat" },
+      { name: "bee", head: "bee", soundFolder: "bee" },
+      { name: "blaze", head: "blaze", soundFolder: "blaze" },
+      { name: "bogged", head: "bogged", soundFolder: "bogged" },
+      { name: "breeze", head: "breeze", soundFolder: "breeze" },
+      { name: "camel", head: "camel", soundFolder: "camel" },
+      { name: "cat", head: "cat", soundFolder: "cat" },
+      { name: "cave spider", head: "cave_spider", soundFolder: "spider" },
+      { name: "chicken", head: "chicken", soundFolder: "chicken" },
+      { name: "cod", head: "cod", soundFolder: "cod" },
+      { name: "cow", head: "cow", soundFolder: "cow" },
+      { name: "creeper", head: "creeper", soundFolder: "creeper" },
+      { name: "dolphin", head: "dolphin", soundFolder: "dolphin" },
+      { name: "donkey", head: "donkey", soundFolder: "donkey" },
+      { name: "drowned", head: "drowned", soundFolder: "drowned" },
+      { name: "elder guardian", head: "elder_guardian", soundFolder: "guardian" },
+      { name: "ender dragon", head: "ender_dragon", soundFolder: "ender_dragon" },
+      { name: "enderman", head: "enderman", soundFolder: "enderman" },
+      { name: "endermite", head: "endermite", soundFolder: "endermite" },
+      { name: "evoker", head: "evoker", soundFolder: "evoker" },
+      { name: "fox", head: "fox", soundFolder: "fox" },
+      { name: "frog", head: "frog", soundFolder: "frog" },
+      { name: "ghast", head: "ghast", soundFolder: "ghast" },
+      { name: "glow squid", head: "glow_squid", soundFolder: "glow_squid" },
+      { name: "goat", head: "goat", soundFolder: "goat" },
+      { name: "guardian", head: "guardian", soundFolder: "guardian" },
+      { name: "hoglin", head: "hoglin", soundFolder: "hoglin" },
+      { name: "horse", head: "horse", soundFolder: "horse" },
+      { name: "husk", head: "husk", soundFolder: "husk" },
+      { name: "iron golem", head: "iron_golem", soundFolder: "iron_golem" },
+      { name: "llama", head: "llama", soundFolder: "llama" },
+      { name: "magma cube", head: "magma_cube", soundFolder: "magma_cube" },
+      { name: "mooshroom", head: "mooshroom", soundFolder: "cow" },
+      { name: "mule", head: "mule", soundFolder: "mule" },
+      { name: "ocelot", head: "ocelot", soundFolder: "ocelot" },
+      { name: "panda", head: "panda", soundFolder: "panda" },
+      { name: "parrot", head: "parrot", soundFolder: "parrot" },
+      { name: "phantom", head: "phantom", soundFolder: "phantom" },
+      { name: "pig", head: "pig", soundFolder: "pig" },
+      { name: "piglin", head: "piglin", soundFolder: "piglin" },
+      { name: "piglin brute", head: "piglin_brute", soundFolder: "piglin_brute" },
+      { name: "pillager", head: "pillager", soundFolder: "pillager" },
+      { name: "polar bear", head: "polar_bear", soundFolder: "polar_bear" },
+      { name: "pufferfish", head: "pufferfish", soundFolder: "puffer_fish" },
+      { name: "rabbit", head: "rabbit", soundFolder: "rabbit" },
+      { name: "ravager", head: "ravager", soundFolder: "ravager" },
+      { name: "salmon", head: "salmon", soundFolder: "salmon" },
+      { name: "sheep", head: "sheep", soundFolder: "sheep" },
+      { name: "shulker", head: "shulker", soundFolder: "shulker" },
+      { name: "silverfish", head: "silverfish", soundFolder: "silverfish" },
+      { name: "skeleton", head: "skeleton", soundFolder: "skeleton" },
+      { name: "skeleton horse", head: "skeleton_horse", soundFolder: "horse" },
+      { name: "slime", head: "slime", soundFolder: "slime" },
+      { name: "sniffer", head: "sniffer", soundFolder: "sniffer" },
+      { name: "snow golem", head: "snow_golem", soundFolder: "snow_golem" },
+      { name: "spider", head: "spider", soundFolder: "spider" },
+      { name: "squid", head: "squid", soundFolder: "squid" },
+      { name: "stray", head: "stray", soundFolder: "stray" },
+      { name: "strider", head: "strider", soundFolder: "strider" },
+      { name: "tadpole", head: "tadpole", soundFolder: "tadpole" },
+      { name: "trader llama", head: "trader_llama", soundFolder: "llama" },
+      { name: "tropical fish", head: "tropical_fish", soundFolder: "tropical_fish" },
+      { name: "turtle", head: "turtle", soundFolder: "turtle" },
+      { name: "vex", head: "vex", soundFolder: "vex" },
+      { name: "villager", head: "villager", soundFolder: "villager" },
+      { name: "vindicator", head: "vindicator", soundFolder: "vindicator" },
+      { name: "wandering trader", head: "wandering_trader", soundFolder: "wandering_trader" },
+      { name: "warden", head: "warden", soundFolder: "warden" },
+      { name: "witch", head: "witch", soundFolder: "witch" },
+      { name: "wither", head: "wither", soundFolder: "wither" },
+      { name: "wither skeleton", head: "wither_skeleton", soundFolder: "wither_skeleton" },
+      { name: "wolf", head: "wolf", soundFolder: "wolf" },
+      { name: "zoglin", head: "zoglin", soundFolder: "zoglin" },
+      { name: "zombie", head: "zombie", soundFolder: "zombie" },
+      { name: "zombie horse", head: "zombie_horse", soundFolder: "horse" },
+      { name: "zombie villager", head: "zombie_villager", soundFolder: "zombie_villager" },
+      { name: "zombified piglin", head: "zombified_piglin", soundFolder: "zombified_piglin" }
+    ].map((mob) => ({
+      ...mob,
+      sprite: `${MOB_HEAD_BASE}/${mob.head}/160`
+    }));
+    const guessed = new Set();
+    const rowMap = new Map();
+
+    function normalizeMobName(value) {
+      return value.toLowerCase().replace(/\s+/g, " ").trim();
+    }
+
+    function playMobSound(folder) {
+      const candidates = [
+        `${SOUND_BASE}/${folder}/ambient1.ogg`,
+        `${SOUND_BASE}/${folder}/ambient.ogg`,
+        `${SOUND_BASE}/${folder}/say1.ogg`,
+        `${SOUND_BASE}/${folder}/hurt1.ogg`,
+        `${SOUND_BASE}/${folder}/death1.ogg`
+      ];
+
+      let i = 0;
+      function tryNext() {
+        if (i >= candidates.length) {
+          guessMessage.textContent = "Correct guess. Sound not available for this mob.";
+          return;
+        }
+        const audio = new Audio(candidates[i]);
+        i += 1;
+        audio.addEventListener("error", tryNext, { once: true });
+        audio.play().catch(tryNext);
+      }
+      tryNext();
+    }
+
+    function renderRows() {
+      mobBoard.innerHTML = "";
+      mobs.forEach((mob, index) => {
+        const row = document.createElement("div");
+        row.className = "mob-row";
+        row.innerHTML = `
+          <div class="mob-num">${index + 1}</div>
+          <div class="mob-name">${mob.name}</div>
+          <img class="mob-sprite" alt="${mob.name} sprite" />
+        `;
+        mobBoard.appendChild(row);
+        rowMap.set(mob.name, row);
+      });
+    }
+
+    function checkMob() {
+      const value = normalizeMobName(mobInput.value);
+      if (!value) {
+        guessMessage.textContent = "Type a mob name first.";
+        return;
+      }
+
+      const mob = mobs.find((item) => item.name === value);
+      if (!mob) {
+        guessMessage.textContent = `"${value}" is not in the mob list.`;
+      } else if (guessed.has(value)) {
+        guessMessage.textContent = `"${value}" is already guessed.`;
+      } else {
+        guessed.add(value);
+        const row = rowMap.get(value);
+        if (row) {
+          row.classList.add("guessed");
+          const img = row.querySelector(".mob-sprite");
+          img.src = mob.sprite;
+        }
+        guessMessage.textContent = `Correct: ${value}`;
+        playMobSound(mob.soundFolder);
+      }
+
+      mobInput.value = "";
+      mobInput.focus();
+    }
+
+    function openSettings() {
+      overlay.hidden = false;
+      box.hidden = false;
+    }
+
+    function closeSettings() {
+      overlay.hidden = true;
+      box.hidden = true;
+    }
+
+    settingsBtn.addEventListener("click", openSettings);
+    closeSettingsBtn.addEventListener("click", closeSettings);
+    overlay.addEventListener("click", closeSettings);
+    submitGuess.addEventListener("click", checkMob);
+    mobInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        checkMob();
+      }
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        closeSettings();
+      }
+    });
+    renderRows();
+  </script>
+</body>
+</html>

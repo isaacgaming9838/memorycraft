@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MemoryCraft - Guess Mode</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      min-height: 100vh;
+      background: #fff8eb;
+    }
+
+    header {
+      position: relative;
+      padding: 16px 20px;
+      background: #39a845;
+      border-bottom: 2px solid #000;
+    }
+
+    h1 {
+      margin: 0;
+      color: #fff;
+      font-weight: 700;
+      padding-left: 44px;
+      padding-right: 44px;
+      text-shadow:
+        -2px -2px 0 #000,
+        2px -2px 0 #000,
+        -2px 2px 0 #000,
+        2px 2px 0 #000;
+    }
+
+    .icon-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      color: #000;
+      border: 2px solid #000;
+      border-radius: 6px;
+      background: #fff;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    .icon-btn:hover {
+      background: #f2f2f2;
+    }
+
+    .back-link {
+      left: 12px;
+    }
+
+    .settings-btn {
+      right: 12px;
+      width: 36px;
+      height: 36px;
+    }
+
+    .settings-btn svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .settings-overlay {
+      position: fixed;
+      inset: 0;
+      background: #00000066;
+    }
+
+    .settings-box {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: min(460px, calc(100vw - 32px));
+      background: #fff;
+      border: 2px solid #000;
+      border-radius: 10px;
+      padding: 22px;
+      box-shadow: 0 10px 30px #00000040;
+      color: #111;
+    }
+
+    .settings-box h2 {
+      margin: 0 0 10px;
+      font-size: 1.2rem;
+    }
+
+    .settings-box p {
+      margin: 0 0 14px;
+    }
+
+    .close-settings {
+      border: 2px solid #000;
+      background: #fff;
+      color: #111;
+      padding: 8px 12px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      border-radius: 8px;
+    }
+
+    .coming-soon {
+      margin: 24px 20px;
+      font-size: 2rem;
+      font-weight: 700;
+      color: #111;
+    }
+
+  </style>
+</head>
+<body>
+  <header>
+    <a class="icon-btn back-link" href="index.html" aria-label="Back to home">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M14.5 5L7.5 12L14.5 19" stroke="currentColor" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+    <button id="settings-btn" class="icon-btn settings-btn" type="button" aria-label="Open settings">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 8.5A3.5 3.5 0 1 0 12 15.5A3.5 3.5 0 1 0 12 8.5Z" stroke="currentColor" stroke-width="2"/>
+        <path d="M4 13V11L6.1 10.3C6.3 9.7 6.5 9.2 6.9 8.7L5.9 6.7L7.3 5.3L9.3 6.3C9.8 5.9 10.3 5.7 10.9 5.5L11.6 3.5H13.6L14.3 5.5C14.9 5.7 15.4 5.9 15.9 6.3L17.9 5.3L19.3 6.7L18.3 8.7C18.7 9.2 18.9 9.7 19.1 10.3L21.2 11V13L19.1 13.7C18.9 14.3 18.7 14.8 18.3 15.3L19.3 17.3L17.9 18.7L15.9 17.7C15.4 18.1 14.9 18.3 14.3 18.5L13.6 20.5H11.6L10.9 18.5C10.3 18.3 9.8 18.1 9.3 17.7L7.3 18.7L5.9 17.3L6.9 15.3C6.5 14.8 6.3 14.3 6.1 13.7L4 13Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <h1>Guess Mode</h1>
+  </header>
+  <div id="settings-overlay" class="settings-overlay" hidden></div>
+  <div id="settings-box" class="settings-box" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
+    <h2 id="settings-title">Settings</h2>
+    <p>Settings options coming soon.</p>
+    <button id="close-settings" class="close-settings" type="button">Close</button>
+  </div>
+  <p class="coming-soon">Coming soon!</p>
+  <script>
+    const settingsBtn = document.getElementById("settings-btn");
+    const closeSettingsBtn = document.getElementById("close-settings");
+    const overlay = document.getElementById("settings-overlay");
+    const box = document.getElementById("settings-box");
+
+    function openSettings() {
+      overlay.hidden = false;
+      box.hidden = false;
+    }
+
+    function closeSettings() {
+      overlay.hidden = true;
+      box.hidden = true;
+    }
+
+    settingsBtn.addEventListener("click", openSettings);
+    closeSettingsBtn.addEventListener("click", closeSettings);
+    overlay.addEventListener("click", closeSettings);
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        closeSettings();
+      }
+    });
+  </script>
+</body>
+</html>
