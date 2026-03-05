@@ -70,6 +70,8 @@
     .settings-overlay {
       position: fixed;
       inset: 0;
+      z-index: 9998;
+      pointer-events: auto;
       background: #00000066;
     }
 
@@ -77,6 +79,8 @@
       position: fixed;
       top: 50%;
       left: 50%;
+      z-index: 9999;
+      pointer-events: auto;
       transform: translate(-50%, -50%);
       width: min(460px, calc(100vw - 32px));
       background: #fff;
@@ -107,6 +111,33 @@
       border-radius: 8px;
     }
 
+    .reset-progress {
+      width: 100%;
+      min-height: 48px;
+      margin: 6px 0 10px;
+      border: 2px solid #000;
+      border-radius: 8px;
+      background: #fee2e2;
+      color: #7f1d1d;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .select-filter {
+      width: 100%;
+      min-height: 48px;
+      margin: 0 0 10px;
+      border: 2px solid #000;
+      border-radius: 8px;
+      background: #dbeafe;
+      color: #1e3a8a;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+
     main {
       max-width: 760px;
       margin: 24px auto;
@@ -121,11 +152,13 @@
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
+      padding: 8px 0;
+      background: #eaf7ff;
     }
 
     #mob-input {
       flex: 1 1 260px;
-      min-height: 48px;
+      min-height: 56px;
       border: 2px solid #000;
       border-radius: 8px;
       background: #fff;
@@ -134,7 +167,7 @@
     }
 
     #submit-guess {
-      min-height: 48px;
+      min-height: 56px;
       border: 2px solid #000;
       border-radius: 8px;
       padding: 10px 14px;
@@ -186,8 +219,8 @@
     }
 
     .mob-sprite {
-      width: 48px;
-      height: 48px;
+      width: 56px;
+      height: 56px;
       object-fit: contain;
       justify-self: end;
       opacity: 0;
@@ -195,6 +228,11 @@
 
     .mob-row.guessed .mob-sprite {
       opacity: 1;
+    }
+
+    .mob-row.focused {
+      outline: 3px solid #22c55e;
+      outline-offset: 2px;
     }
 
   </style>
@@ -217,7 +255,9 @@
   <div id="settings-overlay" class="settings-overlay" hidden></div>
   <div id="settings-box" class="settings-box" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
     <h2 id="settings-title">Settings</h2>
-    <p>Settings options coming soon.</p>
+    <p>Settings options</p>
+    <button id="reset-progress" class="reset-progress" type="button">Reset</button>
+    <button id="select-filter" class="select-filter" type="button">Select Mobs</button>
     <button id="close-settings" class="close-settings" type="button">Close</button>
   </div>
   <main>
@@ -233,100 +273,163 @@
   <script>
     const settingsBtn = document.getElementById("settings-btn");
     const closeSettingsBtn = document.getElementById("close-settings");
+    const resetProgressBtn = document.getElementById("reset-progress");
+    const selectFilterBtn = document.getElementById("select-filter");
     const overlay = document.getElementById("settings-overlay");
     const box = document.getElementById("settings-box");
     const mobInput = document.getElementById("mob-input");
     const submitGuess = document.getElementById("submit-guess");
     const guessMessage = document.getElementById("guess-message");
     const mobBoard = document.getElementById("mob-board");
+    const guessRow = document.querySelector(".guess-row");
 
+    const MOB_RENDER_BASE = "https://mc-heads.net/mob";
     const MOB_HEAD_BASE = "https://mc-heads.net/head";
-    const SOUND_BASE = "https://mcasset.cloud/1.20.4/assets/minecraft/sounds/entity";
+    const LOCAL_MOB_BASE = "assets/mobs";
+    const MOB_FILTER_KEY = "memory_mode_mob_filters";
+    const FILTER_OPTIONS = ["nether", "overworld", "end", "neutral", "passive", "hostile"];
+
+    function getDefaultFilters() {
+      return [...FILTER_OPTIONS];
+    }
+
+    function readSelectedFilters() {
+      try {
+        const raw = localStorage.getItem(MOB_FILTER_KEY);
+        if (!raw) return getDefaultFilters();
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return getDefaultFilters();
+        const valid = parsed.filter((item) => FILTER_OPTIONS.includes(item));
+        return valid;
+      } catch {
+        return getDefaultFilters();
+      }
+    }
+
+    function getMobTags(name) {
+      const nether = new Set(["blaze", "ghast", "magma cube", "hoglin", "piglin", "piglin brute", "strider", "zoglin", "zombified piglin", "wither skeleton"]);
+      const end = new Set(["ender dragon", "enderman", "endermite", "shulker"]);
+      const passive = new Set(["allay", "armadillo", "axolotl", "bat", "camel", "cat", "chicken", "cod", "cow", "donkey", "fox", "frog", "glow squid", "goat", "horse", "llama", "mooshroom", "mule", "ocelot", "panda", "parrot", "pig", "pufferfish", "rabbit", "salmon", "sheep", "skeleton horse", "sniffer", "squid", "strider", "tadpole", "tropical fish", "turtle", "villager", "wandering trader", "wolf", "zombie horse"]);
+      const neutral = new Set(["bee", "cave spider", "dolphin", "enderman", "goat", "iron golem", "llama", "piglin", "polar bear", "spider", "trader llama", "wolf", "zombified piglin"]);
+      const tags = [];
+      if (nether.has(name)) tags.push("nether");
+      else if (end.has(name)) tags.push("end");
+      else tags.push("overworld");
+      if (passive.has(name)) tags.push("passive");
+      if (neutral.has(name)) tags.push("neutral");
+      if (!passive.has(name) && !neutral.has(name)) tags.push("hostile");
+      return tags;
+    }
+
     const mobs = [
-      { name: "allay", head: "allay", soundFolder: "allay" },
-      { name: "armadillo", head: "armadillo", soundFolder: "armadillo" },
-      { name: "axolotl", head: "axolotl", soundFolder: "axolotl" },
-      { name: "bat", head: "bat", soundFolder: "bat" },
-      { name: "bee", head: "bee", soundFolder: "bee" },
-      { name: "blaze", head: "blaze", soundFolder: "blaze" },
-      { name: "bogged", head: "bogged", soundFolder: "bogged" },
-      { name: "breeze", head: "breeze", soundFolder: "breeze" },
-      { name: "camel", head: "camel", soundFolder: "camel" },
-      { name: "cat", head: "cat", soundFolder: "cat" },
-      { name: "cave spider", head: "cave_spider", soundFolder: "spider" },
-      { name: "chicken", head: "chicken", soundFolder: "chicken" },
-      { name: "cod", head: "cod", soundFolder: "cod" },
-      { name: "cow", head: "cow", soundFolder: "cow" },
-      { name: "creeper", head: "creeper", soundFolder: "creeper" },
-      { name: "dolphin", head: "dolphin", soundFolder: "dolphin" },
-      { name: "donkey", head: "donkey", soundFolder: "donkey" },
-      { name: "drowned", head: "drowned", soundFolder: "drowned" },
-      { name: "elder guardian", head: "elder_guardian", soundFolder: "guardian" },
-      { name: "ender dragon", head: "ender_dragon", soundFolder: "ender_dragon" },
-      { name: "enderman", head: "enderman", soundFolder: "enderman" },
-      { name: "endermite", head: "endermite", soundFolder: "endermite" },
-      { name: "evoker", head: "evoker", soundFolder: "evoker" },
-      { name: "fox", head: "fox", soundFolder: "fox" },
-      { name: "frog", head: "frog", soundFolder: "frog" },
-      { name: "ghast", head: "ghast", soundFolder: "ghast" },
-      { name: "glow squid", head: "glow_squid", soundFolder: "glow_squid" },
-      { name: "goat", head: "goat", soundFolder: "goat" },
-      { name: "guardian", head: "guardian", soundFolder: "guardian" },
-      { name: "hoglin", head: "hoglin", soundFolder: "hoglin" },
-      { name: "horse", head: "horse", soundFolder: "horse" },
-      { name: "husk", head: "husk", soundFolder: "husk" },
-      { name: "iron golem", head: "iron_golem", soundFolder: "iron_golem" },
-      { name: "llama", head: "llama", soundFolder: "llama" },
-      { name: "magma cube", head: "magma_cube", soundFolder: "magma_cube" },
-      { name: "mooshroom", head: "mooshroom", soundFolder: "cow" },
-      { name: "mule", head: "mule", soundFolder: "mule" },
-      { name: "ocelot", head: "ocelot", soundFolder: "ocelot" },
-      { name: "panda", head: "panda", soundFolder: "panda" },
-      { name: "parrot", head: "parrot", soundFolder: "parrot" },
-      { name: "phantom", head: "phantom", soundFolder: "phantom" },
-      { name: "pig", head: "pig", soundFolder: "pig" },
-      { name: "piglin", head: "piglin", soundFolder: "piglin" },
-      { name: "piglin brute", head: "piglin_brute", soundFolder: "piglin_brute" },
-      { name: "pillager", head: "pillager", soundFolder: "pillager" },
-      { name: "polar bear", head: "polar_bear", soundFolder: "polar_bear" },
-      { name: "pufferfish", head: "pufferfish", soundFolder: "puffer_fish" },
-      { name: "rabbit", head: "rabbit", soundFolder: "rabbit" },
-      { name: "ravager", head: "ravager", soundFolder: "ravager" },
-      { name: "salmon", head: "salmon", soundFolder: "salmon" },
-      { name: "sheep", head: "sheep", soundFolder: "sheep" },
-      { name: "shulker", head: "shulker", soundFolder: "shulker" },
-      { name: "silverfish", head: "silverfish", soundFolder: "silverfish" },
-      { name: "skeleton", head: "skeleton", soundFolder: "skeleton" },
-      { name: "skeleton horse", head: "skeleton_horse", soundFolder: "horse" },
-      { name: "slime", head: "slime", soundFolder: "slime" },
-      { name: "sniffer", head: "sniffer", soundFolder: "sniffer" },
-      { name: "snow golem", head: "snow_golem", soundFolder: "snow_golem" },
-      { name: "spider", head: "spider", soundFolder: "spider" },
-      { name: "squid", head: "squid", soundFolder: "squid" },
-      { name: "stray", head: "stray", soundFolder: "stray" },
-      { name: "strider", head: "strider", soundFolder: "strider" },
-      { name: "tadpole", head: "tadpole", soundFolder: "tadpole" },
-      { name: "trader llama", head: "trader_llama", soundFolder: "llama" },
-      { name: "tropical fish", head: "tropical_fish", soundFolder: "tropical_fish" },
-      { name: "turtle", head: "turtle", soundFolder: "turtle" },
-      { name: "vex", head: "vex", soundFolder: "vex" },
-      { name: "villager", head: "villager", soundFolder: "villager" },
-      { name: "vindicator", head: "vindicator", soundFolder: "vindicator" },
-      { name: "wandering trader", head: "wandering_trader", soundFolder: "wandering_trader" },
-      { name: "warden", head: "warden", soundFolder: "warden" },
-      { name: "witch", head: "witch", soundFolder: "witch" },
-      { name: "wither", head: "wither", soundFolder: "wither" },
-      { name: "wither skeleton", head: "wither_skeleton", soundFolder: "wither_skeleton" },
-      { name: "wolf", head: "wolf", soundFolder: "wolf" },
-      { name: "zoglin", head: "zoglin", soundFolder: "zoglin" },
-      { name: "zombie", head: "zombie", soundFolder: "zombie" },
-      { name: "zombie horse", head: "zombie_horse", soundFolder: "horse" },
-      { name: "zombie villager", head: "zombie_villager", soundFolder: "zombie_villager" },
-      { name: "zombified piglin", head: "zombified_piglin", soundFolder: "zombified_piglin" }
+      { name: "allay", head: "allay" },
+      { name: "armadillo", head: "armadillo" },
+      { name: "axolotl", head: "axolotl" },
+      { name: "bat", head: "bat" },
+      { name: "bee", head: "bee" },
+      { name: "blaze", head: "blaze" },
+      { name: "bogged", head: "bogged" },
+      { name: "breeze", head: "breeze" },
+      { name: "camel", head: "camel" },
+      { name: "cat", head: "cat" },
+      { name: "cave spider", head: "cave_spider" },
+      { name: "chicken", head: "chicken" },
+      { name: "cod", head: "cod" },
+      { name: "cow", head: "cow" },
+      { name: "creeper", head: "creeper" },
+      { name: "dolphin", head: "dolphin" },
+      { name: "donkey", head: "donkey" },
+      { name: "drowned", head: "drowned" },
+      { name: "elder guardian", head: "elder_guardian" },
+      { name: "ender dragon", head: "ender_dragon" },
+      { name: "enderman", head: "enderman" },
+      { name: "endermite", head: "endermite" },
+      { name: "evoker", head: "evoker" },
+      { name: "fox", head: "fox" },
+      { name: "frog", head: "frog" },
+      { name: "ghast", head: "ghast" },
+      { name: "glow squid", head: "glow_squid" },
+      { name: "goat", head: "goat" },
+      { name: "guardian", head: "guardian" },
+      { name: "hoglin", head: "hoglin" },
+      { name: "horse", head: "horse" },
+      { name: "husk", head: "husk" },
+      { name: "iron golem", head: "iron_golem" },
+      { name: "llama", head: "llama" },
+      { name: "magma cube", head: "magma_cube" },
+      { name: "mooshroom", head: "mooshroom" },
+      { name: "mule", head: "mule" },
+      { name: "ocelot", head: "ocelot" },
+      { name: "panda", head: "panda" },
+      { name: "parrot", head: "parrot" },
+      { name: "phantom", head: "phantom" },
+      { name: "pig", head: "pig" },
+      { name: "piglin", head: "piglin" },
+      { name: "piglin brute", head: "piglin_brute" },
+      { name: "pillager", head: "pillager" },
+      { name: "polar bear", head: "polar_bear" },
+      { name: "pufferfish", head: "pufferfish" },
+      { name: "rabbit", head: "rabbit" },
+      { name: "ravager", head: "ravager" },
+      { name: "salmon", head: "salmon" },
+      { name: "sheep", head: "sheep" },
+      { name: "shulker", head: "shulker" },
+      { name: "silverfish", head: "silverfish" },
+      { name: "skeleton", head: "skeleton" },
+      { name: "skeleton horse", head: "skeleton_horse" },
+      { name: "slime", head: "slime" },
+      { name: "sniffer", head: "sniffer", spriteOverride: "https://mcasset.cloud/1.20.4/assets/minecraft/textures/item/sniffer_spawn_egg.png" },
+      { name: "snow golem", head: "snow_golem" },
+      { name: "spider", head: "spider" },
+      { name: "squid", head: "squid" },
+      { name: "stray", head: "stray" },
+      { name: "strider", head: "strider" },
+      { name: "tadpole", head: "tadpole" },
+      { name: "trader llama", head: "trader_llama" },
+      { name: "tropical fish", head: "tropical_fish" },
+      { name: "turtle", head: "turtle" },
+      { name: "vex", head: "vex" },
+      { name: "villager", head: "villager" },
+      { name: "vindicator", head: "vindicator" },
+      { name: "wandering trader", head: "wandering_trader" },
+      { name: "warden", head: "warden" },
+      { name: "witch", head: "witch" },
+      { name: "wither", head: "wither" },
+      { name: "wither skeleton", head: "wither_skeleton" },
+      { name: "wolf", head: "wolf" },
+      { name: "zoglin", head: "zoglin" },
+      { name: "zombie", head: "zombie" },
+      { name: "zombie horse", head: "zombie_horse" },
+      { name: "zombie villager", head: "zombie_villager" },
+      { name: "zombified piglin", head: "zombified_piglin" }
     ].map((mob) => ({
       ...mob,
-      sprite: `${MOB_HEAD_BASE}/${mob.head}/160`
+      sprite: `${MOB_RENDER_BASE}/${mob.head}/160`
     }));
+
+    const releaseOrder = [
+      "pig", "sheep", "cow", "chicken", "squid", "zombie", "skeleton", "spider",
+      "creeper", "slime", "ghast", "zombified piglin", "blaze", "magma cube", "wolf",
+      "enderman", "silverfish", "cave spider", "villager", "iron golem", "snow golem",
+      "mooshroom", "ocelot", "ender dragon", "wither skeleton", "wither", "witch", "bat",
+      "horse", "donkey", "mule", "skeleton horse", "zombie horse", "rabbit", "endermite",
+      "guardian", "elder guardian", "shulker", "polar bear", "husk", "stray", "llama",
+      "vex", "vindicator", "evoker", "parrot", "dolphin", "cod", "salmon", "pufferfish",
+      "tropical fish", "drowned", "turtle", "phantom", "pillager", "ravager",
+      "wandering trader", "trader llama", "cat", "fox", "panda", "bee", "zoglin",
+      "hoglin", "piglin", "piglin brute", "strider", "axolotl", "glow squid", "goat",
+      "allay", "frog", "tadpole", "warden", "camel", "sniffer", "breeze", "bogged",
+      "armadillo"
+    ];
+    const releaseRank = new Map(releaseOrder.map((name, index) => [name, index]));
+    mobs.sort((a, b) => (releaseRank.get(a.name) ?? Number.MAX_SAFE_INTEGER) - (releaseRank.get(b.name) ?? Number.MAX_SAFE_INTEGER));
+
+    const selectedFilters = readSelectedFilters();
+    const activeMobs = mobs.filter((mob) => {
+      const tags = getMobTags(mob.name);
+      return selectedFilters.some((filter) => tags.includes(filter));
+    });
+
     const guessed = new Set();
     const rowMap = new Map();
 
@@ -334,32 +437,55 @@
       return value.toLowerCase().replace(/\s+/g, " ").trim();
     }
 
-    function playMobSound(folder) {
-      const candidates = [
-        `${SOUND_BASE}/${folder}/ambient1.ogg`,
-        `${SOUND_BASE}/${folder}/ambient.ogg`,
-        `${SOUND_BASE}/${folder}/say1.ogg`,
-        `${SOUND_BASE}/${folder}/hurt1.ogg`,
-        `${SOUND_BASE}/${folder}/death1.ogg`
-      ];
+    function getMobImageCandidates(mob) {
+      const variants = [mob.head, mob.name.replace(/\s+/g, "_"), mob.head.replace(/_/g, "")];
+      const urls = [];
+      if (mob.spriteOverride) {
+        urls.push(mob.spriteOverride);
+      }
+      variants.forEach((key) => {
+        urls.push(`${LOCAL_MOB_BASE}/${key}.png`);
+        urls.push(`${MOB_RENDER_BASE}/${key}.png`);
+        urls.push(`${MOB_RENDER_BASE}/${key}`);
+        urls.push(`${MOB_RENDER_BASE}/${key}/160`);
+      });
+      urls.push(`${MOB_HEAD_BASE}/${mob.head}/160`);
+      urls.push(`${MOB_HEAD_BASE}/${mob.head}`);
+      return [...new Set(urls)];
+    }
 
-      let i = 0;
-      function tryNext() {
-        if (i >= candidates.length) {
-          guessMessage.textContent = "Correct guess. Sound not available for this mob.";
+    function makeFallbackImage(mob) {
+      const label = mob.name.toUpperCase().slice(0, 14);
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96"><rect width="96" height="96" fill="#f3f4f6"/><rect x="4" y="4" width="88" height="88" fill="#ffffff" stroke="#111" stroke-width="4"/><text x="48" y="56" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="700" fill="#111">${label}</text></svg>`;
+      return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+    }
+
+    function setMobImage(img, mob) {
+      const candidates = getMobImageCandidates(mob);
+      let index = 0;
+
+      function loadNext() {
+        if (index >= candidates.length) {
+          img.onerror = null;
+          img.src = makeFallbackImage(mob);
+          img.alt = `${mob.name} image fallback`;
           return;
         }
-        const audio = new Audio(candidates[i]);
-        i += 1;
-        audio.addEventListener("error", tryNext, { once: true });
-        audio.play().catch(tryNext);
+        img.src = candidates[index];
+        index += 1;
       }
-      tryNext();
+
+      img.onerror = loadNext;
+      loadNext();
     }
 
     function renderRows() {
       mobBoard.innerHTML = "";
-      mobs.forEach((mob, index) => {
+      if (activeMobs.length === 0) {
+        guessMessage.textContent = "No mob filters selected. Open Settings > Select Mobs.";
+        return;
+      }
+      activeMobs.forEach((mob, index) => {
         const row = document.createElement("div");
         row.className = "mob-row";
         row.innerHTML = `
@@ -379,7 +505,7 @@
         return;
       }
 
-      const mob = mobs.find((item) => item.name === value);
+      const mob = activeMobs.find((item) => item.name === value);
       if (!mob) {
         guessMessage.textContent = `"${value}" is not in the mob list.`;
       } else if (guessed.has(value)) {
@@ -390,13 +516,20 @@
         if (row) {
           row.classList.add("guessed");
           const img = row.querySelector(".mob-sprite");
-          img.src = mob.sprite;
+          setMobImage(img, mob);
+          row.scrollIntoView({ behavior: "smooth", block: "center" });
+          row.classList.add("focused");
+          setTimeout(() => row.classList.remove("focused"), 1400);
         }
         guessMessage.textContent = `Correct: ${value}`;
-        playMobSound(mob.soundFolder);
       }
 
       mobInput.value = "";
+      mobInput.focus();
+    }
+
+    function focusTypeBar() {
+      guessRow.scrollIntoView({ behavior: "smooth", block: "start" });
       mobInput.focus();
     }
 
@@ -410,9 +543,38 @@
       box.hidden = true;
     }
 
+    function resetProgress() {
+      const confirmed = window.confirm("Are you sure you want to reset your progress?");
+      if (!confirmed) {
+        return;
+      }
+
+      guessed.clear();
+      rowMap.forEach((row, name) => {
+        row.classList.remove("guessed", "focused");
+        const img = row.querySelector(".mob-sprite");
+        if (img) {
+          img.onerror = null;
+          img.removeAttribute("src");
+          img.alt = `${name} sprite`;
+        }
+      });
+      guessMessage.textContent = "Progress reset.";
+      mobInput.value = "";
+      closeSettings();
+      focusTypeBar();
+    }
+
     settingsBtn.addEventListener("click", openSettings);
     closeSettingsBtn.addEventListener("click", closeSettings);
+    resetProgressBtn.addEventListener("click", resetProgress);
+    selectFilterBtn.addEventListener("click", () => {
+      window.location.href = "mob-select.html";
+    });
     overlay.addEventListener("click", closeSettings);
+    box.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
     submitGuess.addEventListener("click", checkMob);
     mobInput.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
@@ -422,7 +584,23 @@
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
         closeSettings();
+        return;
       }
+
+      const typingKey = event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey;
+      if (!typingKey) {
+        return;
+      }
+
+      const target = event.target;
+      const isTypingField = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+      if (isTypingField) {
+        return;
+      }
+
+      event.preventDefault();
+      focusTypeBar();
+      mobInput.value += event.key;
     });
     renderRows();
   </script>

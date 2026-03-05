@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MemoryCraft - Select Mobs</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      min-height: 100vh;
+      background: #eaf7ff;
+    }
+
+    header {
+      position: relative;
+      padding: 16px 20px;
+      background: #39a845;
+      border-bottom: 2px solid #000;
+    }
+
+    h1 {
+      margin: 0;
+      color: #fff;
+      font-weight: 700;
+      padding-left: 44px;
+      text-shadow:
+        -2px -2px 0 #000,
+        2px -2px 0 #000,
+        -2px 2px 0 #000,
+        2px 2px 0 #000;
+    }
+
+    .back-link {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      color: #000;
+      border: 2px solid #000;
+      border-radius: 6px;
+      background: #fff;
+      text-decoration: none;
+    }
+
+    main {
+      max-width: 760px;
+      margin: 24px auto;
+      padding: 0 20px;
+    }
+
+    .panel {
+      background: #fff;
+      border: 2px solid #000;
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .btn {
+      min-height: 44px;
+      border: 2px solid #000;
+      border-radius: 8px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      background: #fff;
+    }
+
+    .btn.primary {
+      background: #39a845;
+      color: #fff;
+    }
+
+    .btn.warn {
+      background: #fee2e2;
+      color: #7f1d1d;
+    }
+
+    .options {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 44px;
+      border: 2px solid #000;
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: #fff;
+      cursor: pointer;
+      user-select: none;
+      text-transform: capitalize;
+      font-weight: 700;
+    }
+
+    .option input {
+      width: 20px;
+      height: 20px;
+      margin: 0;
+    }
+
+    .save-btn {
+      width: 100%;
+      min-height: 50px;
+      border: 2px solid #000;
+      border-radius: 8px;
+      background: #39a845;
+      color: #fff;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="back-link" href="memory-mode.html" aria-label="Back to memory mode">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M14.5 5L7.5 12L14.5 19" stroke="currentColor" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+    <h1>Select Mobs</h1>
+  </header>
+
+  <main>
+    <section class="panel">
+      <div class="actions">
+        <button id="select-all" class="btn primary" type="button">Select All</button>
+        <button id="unselect-all" class="btn warn" type="button">Unselect All</button>
+      </div>
+      <div id="options" class="options"></div>
+      <button id="save" class="save-btn" type="button">Save</button>
+    </section>
+  </main>
+
+  <script>
+    const MOB_FILTER_KEY = "memory_mode_mob_filters";
+    const FILTER_OPTIONS = ["nether", "overworld", "end", "neutral", "passive", "hostile"];
+
+    const optionsRoot = document.getElementById("options");
+    const saveButton = document.getElementById("save");
+    const selectAllButton = document.getElementById("select-all");
+    const unselectAllButton = document.getElementById("unselect-all");
+
+    function readSelected() {
+      try {
+        const raw = localStorage.getItem(MOB_FILTER_KEY);
+        if (!raw) return [...FILTER_OPTIONS];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [...FILTER_OPTIONS];
+        return parsed.filter((item) => FILTER_OPTIONS.includes(item));
+      } catch {
+        return [...FILTER_OPTIONS];
+      }
+    }
+
+    function render() {
+      const selected = new Set(readSelected());
+      optionsRoot.innerHTML = "";
+      FILTER_OPTIONS.forEach((name) => {
+        const label = document.createElement("label");
+        label.className = "option";
+        label.innerHTML = `<input type="checkbox" value="${name}" ${selected.has(name) ? "checked" : ""} /> ${name}`;
+        optionsRoot.appendChild(label);
+      });
+    }
+
+    function setAll(checked) {
+      optionsRoot.querySelectorAll('input[type="checkbox"]').forEach((el) => {
+        el.checked = checked;
+      });
+    }
+
+    function save() {
+      const selected = Array.from(optionsRoot.querySelectorAll('input[type="checkbox"]'))
+        .filter((el) => el.checked)
+        .map((el) => el.value);
+      localStorage.setItem(MOB_FILTER_KEY, JSON.stringify(selected));
+      window.location.href = "memory-mode.html";
+    }
+
+    selectAllButton.addEventListener("click", () => setAll(true));
+    unselectAllButton.addEventListener("click", () => setAll(false));
+    saveButton.addEventListener("click", save);
+
+    render();
+  </script>
+</body>
+</html>
