@@ -1,9 +1,9 @@
 const MOB_RENDER_BASE = "https://mc-heads.net/mob";
 
-export const FILTER_OPTIONS = ["nether", "overworld", "end", "neutral", "passive", "hostile"];
+export const FILTER_OPTIONS = ["mobs", "nether", "overworld", "end", "neutral", "passive", "hostile", "structures", "test"];
 
 export function getDefaultFilters() {
-  return [...FILTER_OPTIONS];
+  return ["mobs", "nether", "overworld", "end", "neutral", "passive", "hostile"];
 }
 
 export function getMobTags(name) {
@@ -19,6 +19,18 @@ export function getMobTags(name) {
   if (passive.has(name)) tags.push("passive");
   if (neutral.has(name)) tags.push("neutral");
   if (!passive.has(name) && !neutral.has(name)) tags.push("hostile");
+  if (name === "pig") tags.push("test");
+  return tags;
+}
+
+export function getStructureTags(name) {
+  const nether = new Set(["bastion remnant", "nether fortress", "nether fossil"]);
+  const end = new Set(["end city"]);
+
+  const tags = ["structures"];
+  if (nether.has(name)) tags.push("nether");
+  else if (end.has(name)) tags.push("end");
+  else tags.push("overworld");
   return tags;
 }
 
@@ -128,3 +140,32 @@ const releaseRank = new Map(releaseOrder.map((name, index) => [name, index]));
 export const mobs = [...baseMobs].sort(
   (a, b) => (releaseRank.get(a.name) ?? Number.MAX_SAFE_INTEGER) - (releaseRank.get(b.name) ?? Number.MAX_SAFE_INTEGER)
 );
+
+const structureNames = [
+  "ancient city",
+  "bastion remnant",
+  "buried treasure",
+  "desert pyramid",
+  "end city",
+  "igloo",
+  "jungle temple",
+  "mineshaft",
+  "nether fortress",
+  "nether fossil",
+  "ocean monument",
+  "pillager outpost",
+  "ruined portal",
+  "shipwreck",
+  "stronghold",
+  "swamp hut",
+  "trail ruins",
+  "trial chambers",
+  "village",
+  "woodland mansion"
+];
+
+export const structures = structureNames.map((name) => ({
+  name,
+  head: "chest",
+  sprite: ""
+}));

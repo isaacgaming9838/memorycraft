@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MemoryCraft - Select Mobs</title>
+  <title>MemoryCraft - Select</title>
   <style>
     body {
       margin: 0;
@@ -134,7 +134,7 @@
         <path d="M14.5 5L7.5 12L14.5 19" stroke="currentColor" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </a>
-    <h1>Select Mobs</h1>
+    <h1>Select</h1>
   </header>
 
   <main>
@@ -148,29 +148,17 @@
     </section>
   </main>
 
-  <script>
-    const MOB_FILTER_KEY = "memory_mode_mob_filters";
-    const FILTER_OPTIONS = ["nether", "overworld", "end", "neutral", "passive", "hostile"];
+  <script type="module">
+    import { FILTER_OPTIONS } from "./js/memory-mode/data.js";
+    import { MOB_FILTER_KEY, readSelectedFilters } from "./js/memory-mode/storage.js";
 
     const optionsRoot = document.getElementById("options");
     const saveButton = document.getElementById("save");
     const selectAllButton = document.getElementById("select-all");
     const unselectAllButton = document.getElementById("unselect-all");
 
-    function readSelected() {
-      try {
-        const raw = localStorage.getItem(MOB_FILTER_KEY);
-        if (!raw) return [...FILTER_OPTIONS];
-        const parsed = JSON.parse(raw);
-        if (!Array.isArray(parsed)) return [...FILTER_OPTIONS];
-        return parsed.filter((item) => FILTER_OPTIONS.includes(item));
-      } catch {
-        return [...FILTER_OPTIONS];
-      }
-    }
-
     function render() {
-      const selected = new Set(readSelected());
+      const selected = new Set(readSelectedFilters());
       optionsRoot.innerHTML = "";
       FILTER_OPTIONS.forEach((name) => {
         const label = document.createElement("label");

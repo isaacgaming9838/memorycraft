@@ -32,7 +32,7 @@
       margin: 0;
       color: #fff;
       font-weight: 700;
-            font-size: 2.2rem;
+            font-size: 2rem;
 text-shadow:
         -2px -2px 0 #000,
         2px -2px 0 #000,
@@ -43,7 +43,7 @@ text-shadow:
     .header-progress {
       margin: 0;
       color: #fff;
-      font-size: 2.2rem;
+      font-size: 2rem;
       font-weight: 800;
       line-height: 1;
       text-shadow:
@@ -86,6 +86,25 @@ text-shadow:
     .settings-btn svg {
       width: 20px;
       height: 20px;
+    }
+
+    .header-timer {
+      position: absolute;
+      right: 56px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #fff;
+      font-weight: 800;
+      font-size: 1rem;
+      text-shadow:
+        -2px -2px 0 #000,
+        2px -2px 0 #000,
+        -2px 2px 0 #000,
+        2px 2px 0 #000;
+    }
+
+    .header-timer[hidden] {
+      display: none;
     }
 
     .settings-overlay {
@@ -262,6 +281,165 @@ text-shadow:
       outline-offset: 2px;
     }
 
+
+    .win-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10020;
+      background: #00000088;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+    }
+
+    .win-overlay[hidden] {
+      display: none;
+    }
+
+    .win-content {
+      width: min(560px, calc(100vw - 32px));
+      min-height: min(68vh, 520px);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .win-title {
+      margin: 0;
+      color: #fff;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 3.5rem;
+      font-weight: 800;
+      text-shadow:
+        -2px -2px 0 #000,
+        2px -2px 0 #000,
+        -2px 2px 0 #000,
+        2px 2px 0 #000;
+    }
+
+    .confetti {
+      position: absolute;
+      width: 74px;
+      height: 74px;
+      color: #facc15;
+      filter: drop-shadow(0 2px 0 #000);
+    }
+
+    .confetti.tl { top: 10px; left: 10px; transform: rotate(25deg); }
+    .confetti.tr { top: 10px; right: 10px; transform: rotate(115deg); }
+    .confetti.bl { bottom: 84px; left: 10px; transform: rotate(-55deg); }
+    .confetti.br { bottom: 84px; right: 10px; transform: rotate(-140deg); }
+
+    .new-game-btn {
+      width: min(360px, calc(100vw - 80px));
+      min-height: 52px;
+      margin-top: auto;
+      border: 2px solid #000;
+      border-radius: 8px;
+      background: #fee2e2;
+      color: #7f1d1d;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .win-overlay.no-timer .win-title {
+      width: max-content;
+      font-size: 3.5rem;
+    }
+
+    .win-time {
+      margin: 0;
+      color: #fff;
+      position: absolute;
+      top: calc(50% - 4.4rem);
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 3.5rem;
+      font-weight: 700;
+      white-space: nowrap;
+      width: max-content;
+      text-shadow:
+        -2px -2px 0 #000,
+        2px -2px 0 #000,
+        -2px 2px 0 #000,
+        2px 2px 0 #000;
+    }
+
+    .timer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 0 0 10px;
+      padding: 8px 10px;
+      border: 2px solid #000;
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
+    .timer-label {
+      font-weight: 700;
+    }
+
+    .timer-meta {
+      font-size: 0.95rem;
+      color: #374151;
+      margin-left: auto;
+      margin-right: 10px;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 52px;
+      height: 30px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      inset: 0;
+      cursor: pointer;
+      background: #d1d5db;
+      border: 2px solid #000;
+      border-radius: 999px;
+      transition: background 0.2s ease;
+    }
+
+    .slider::before {
+      content: "";
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      left: 3px;
+      top: 3px;
+      background: #fff;
+      border: 2px solid #000;
+      border-radius: 50%;
+      transition: transform 0.2s ease;
+      box-sizing: border-box;
+    }
+
+    .switch input:checked + .slider {
+      background: #86efac;
+    }
+
+    .switch input:checked + .slider::before {
+      transform: translateX(22px);
+    }
   </style>
 </head>
 <body>
@@ -277,6 +455,7 @@ text-shadow:
         <path d="M4 13V11L6.1 10.3C6.3 9.7 6.5 9.2 6.9 8.7L5.9 6.7L7.3 5.3L9.3 6.3C9.8 5.9 10.3 5.7 10.9 5.5L11.6 3.5H13.6L14.3 5.5C14.9 5.7 15.4 5.9 15.9 6.3L17.9 5.3L19.3 6.7L18.3 8.7C18.7 9.2 18.9 9.7 19.1 10.3L21.2 11V13L19.1 13.7C18.9 14.3 18.7 14.8 18.3 15.3L19.3 17.3L17.9 18.7L15.9 17.7C15.4 18.1 14.9 18.3 14.3 18.5L13.6 20.5H11.6L10.9 18.5C10.3 18.3 9.8 18.1 9.3 17.7L7.3 18.7L5.9 17.3L6.9 15.3C6.5 14.8 6.3 14.3 6.1 13.7L4 13Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
       </svg>
     </button>
+    <p id="header-timer" class="header-timer">00:00</p>
     <div class="header-title-row">
       <h1>Memory Mode</h1>
       <p id="header-progress" class="header-progress"></p>
@@ -286,9 +465,28 @@ text-shadow:
   <div id="settings-box" class="settings-box" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
     <h2 id="settings-title">Settings</h2>
     <p>Settings options</p>
+    <div class="timer-row">
+      <span class="timer-label">Hide Timer</span>
+      <span id="timer-value" class="timer-meta">00:00</span>
+      <label class="switch" aria-label="Hide timer">
+        <input id="timer-toggle" type="checkbox" />
+        <span class="slider"></span>
+      </label>
+    </div>
     <button id="reset-progress" class="reset-progress" type="button">Reset</button>
-    <button id="select-filter" class="select-filter" type="button">Select Mobs</button>
+    <button id="select-filter" class="select-filter" type="button">Select</button>
     <button id="close-settings" class="close-settings" type="button">Close</button>
+  </div>
+  <div id="win-overlay" class="win-overlay" hidden>
+    <div class="win-content" role="dialog" aria-modal="true" aria-labelledby="win-title">
+      <svg class="confetti tl" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2L14.2 7.2L20 9.5L14.2 11.8L12 17L9.8 11.8L4 9.5L9.8 7.2Z"/><circle cx="19" cy="4" r="2" fill="#22c55e"/><circle cx="5" cy="19" r="2" fill="#60a5fa"/></svg>
+      <svg class="confetti tr" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2L14.2 7.2L20 9.5L14.2 11.8L12 17L9.8 11.8L4 9.5L9.8 7.2Z"/><circle cx="19" cy="4" r="2" fill="#22c55e"/><circle cx="5" cy="19" r="2" fill="#60a5fa"/></svg>
+      <svg class="confetti bl" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2L14.2 7.2L20 9.5L14.2 11.8L12 17L9.8 11.8L4 9.5L9.8 7.2Z"/><circle cx="19" cy="4" r="2" fill="#22c55e"/><circle cx="5" cy="19" r="2" fill="#60a5fa"/></svg>
+      <svg class="confetti br" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2L14.2 7.2L20 9.5L14.2 11.8L12 17L9.8 11.8L4 9.5L9.8 7.2Z"/><circle cx="19" cy="4" r="2" fill="#22c55e"/><circle cx="5" cy="19" r="2" fill="#60a5fa"/></svg>
+      <h2 id="win-title" class="win-title">You Won!</h2>
+      <p id="win-time" class="win-time"></p>
+      <button id="new-game-btn" class="new-game-btn" type="button">New Game</button>
+    </div>
   </div>
   <main>
     <section class="game-panel">
