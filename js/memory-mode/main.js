@@ -3,6 +3,7 @@ import { readSelectedFilters } from "./storage.js";
 import { setMobImage } from "./images.js";
 
 const TIMER_ENABLED_KEY = "memory_mode_timer_enabled";
+const MUSIC_ENABLED_KEY = "memory_mode_music_enabled";
 
 const settingsBtn = document.getElementById("settings-btn");
 const closeSettingsBtn = document.getElementById("close-settings");
@@ -22,6 +23,10 @@ const winTime = document.getElementById("win-time");
 const timerToggle = document.getElementById("timer-toggle");
 const timerValue = document.getElementById("timer-value");
 const headerTimer = document.getElementById("header-timer");
+const musicToggle = document.getElementById("music-toggle");
+const bgMusic = document.getElementById("bg-music");
+const winSound = document.getElementById("win-sound");
+const confettiRain = document.getElementById("confetti-rain");
 
 const selectedFilters = readSelectedFilters();
 const locationFilters = ["nether", "overworld", "end"];
@@ -76,6 +81,12 @@ let timerStartedAt = 0;
 let timerIntervalId = null;
 let timerWasRunningBeforeSettings = false;
 
+let musicEnabled = readMusicEnabled();
+let hasUserInteracted = false;
+let confettiIntervalId = null;
+let confettiAutoStopTimeoutId = null;
+let winSoundAutoStopTimeoutId = null;
+
 function normalizeMobName(value) {
   return value.toLowerCase().replace(/\s+/g, " ").trim();
 }
@@ -84,12 +95,76 @@ function formatDisplayName(value) {
   return value.replace(/\b[a-z]/g, (char) => char.toUpperCase());
 }
 
+function createConfettiPiece() {
+  if (!confettiRain) return;
+
+  const piece = document.createElement("span");
+  piece.className = "confetti-piece";
+
+  const colors = ["#f87171", "#facc15", "#4ade80", "#60a5fa", "#f472b6", "#fb923c"];
+  const left = Math.random() * 100;
+  const duration = 2.6 + Math.random() * 2.2;
+  const delay = Math.random() * 0.25;
+  const size = 8 + Math.random() * 10;
+
+  piece.style.left = `${left}%`;
+  piece.style.width = `${size}px`;
+  piece.style.height = `${size * 1.5}px`;
+  piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+  piece.style.animationDuration = `${duration}s`;
+  piece.style.animationDelay = `${delay}s`;
+
+  piece.addEventListener("animationend", () => {
+    piece.remove();
+  });
+
+  confettiRain.appendChild(piece);
+}
+
+function startConfettiRain() {
+  if (!confettiRain || confettiIntervalId !== null) return;
+
+  for (let i = 0; i < 60; i += 1) {
+    createConfettiPiece();
+  }
+
+  confettiIntervalId = window.setInterval(() => {
+    for (let i = 0; i < 10; i += 1) {
+      createConfettiPiece();
+    }
+  }, 140);
+
+  if (confettiAutoStopTimeoutId !== null) {
+    window.clearTimeout(confettiAutoStopTimeoutId);
+  }
+
+  confettiAutoStopTimeoutId = window.setTimeout(() => {
+    if (confettiIntervalId !== null) {
+      window.clearInterval(confettiIntervalId);
+      confettiIntervalId = null;
+    }
+    confettiAutoStopTimeoutId = null;
+  }, 10000);
+}
+
+function stopConfettiRain() {
+  if (confettiIntervalId !== null) {
+    window.clearInterval(confettiIntervalId);
+    confettiIntervalId = null;
+  }
+  if (confettiAutoStopTimeoutId !== null) {
+    window.clearTimeout(confettiAutoStopTimeoutId);
+    confettiAutoStopTimeoutId = null;
+  }
+  if (confettiRain) {
+    confettiRain.innerHTML = "";
+  }
+}
+
 function readTimerEnabled() {
   try {
     const raw = localStorage.getItem(TIMER_ENABLED_KEY);
-    if (raw === null) {
-      return true;
-    }
+    if (raw === null) return true;
     return raw === "true";
   } catch {
     return true;
@@ -102,6 +177,75 @@ function writeTimerEnabled(value) {
   } catch {
     // Ignore localStorage write failure
   }
+}
+
+function readMusicEnabled() {
+  try {
+    const raw = localStorage.getItem(MUSIC_ENABLED_KEY);
+    if (raw === null) return false;
+    return raw === "true";
+  } catch {
+    return false;
+  }
+}
+
+function writeMusicEnabled(value) {
+  try {
+    localStorage.setItem(MUSIC_ENABLED_KEY, String(value));
+  } catch {
+    // Ignore localStorage write failure
+  }
+}
+
+function startBackgroundMusicIfAllowed() {
+  if (!bgMusic || !musicEnabled || !hasUserInteracted) return;
+  bgMusic.volume = 0.35;
+  bgMusic.play().catch(() => {
+    // Browser may block autoplay until interaction.
+  });
+}
+
+function stopBackgroundMusic() {
+  if (!bgMusic) return;
+  bgMusic.pause();
+}
+
+function playWinSound() {
+  if (!winSound || !musicEnabled || !hasUserInteracted) return;
+
+  if (winSoundAutoStopTimeoutId !== null) {
+    window.clearTimeout(winSoundAutoStopTimeoutId);
+    winSoundAutoStopTimeoutId = null;
+  }
+
+  winSound.currentTime = 0;
+  winSound.volume = 0.75;
+  winSound.play().catch(() => {
+    // Browser may block autoplay until interaction.
+  });
+
+  winSoundAutoStopTimeoutId = window.setTimeout(() => {
+    stopWinSound();
+  }, 15000);
+}
+
+function stopWinSound() {
+  if (winSoundAutoStopTimeoutId !== null) {
+    window.clearTimeout(winSoundAutoStopTimeoutId);
+    winSoundAutoStopTimeoutId = null;
+  }
+  if (!winSound) return;
+  winSound.pause();
+  winSound.currentTime = 0;
+}
+
+function applyMusicState() {
+  if (!musicEnabled) {
+    stopBackgroundMusic();
+    stopWinSound();
+    return;
+  }
+  startBackgroundMusicIfAllowed();
 }
 
 function formatDuration(ms) {
@@ -143,18 +287,14 @@ function updateTimerUI() {
 }
 
 function startTimer() {
-  if (!timerEnabled || hasWon || timerStartedAt > 0) {
-    return;
-  }
+  if (!timerEnabled || hasWon || timerStartedAt > 0) return;
   timerStartedAt = Date.now();
   timerIntervalId = window.setInterval(updateTimerUI, 250);
   updateTimerUI();
 }
 
 function pauseTimer() {
-  if (timerStartedAt === 0) {
-    return false;
-  }
+  if (timerStartedAt === 0) return false;
   timerElapsedMs += Date.now() - timerStartedAt;
   timerStartedAt = 0;
   if (timerIntervalId) {
@@ -172,12 +312,8 @@ function resetTimer() {
 }
 
 function maybeStartTimerFromInput() {
-  if (!timerEnabled || hasWon) {
-    return;
-  }
-  if (mobInput.value.trim().length > 0) {
-    startTimer();
-  }
+  if (!timerEnabled || hasWon) return;
+  if (mobInput.value.trim().length > 0) startTimer();
 }
 
 function updateProgress() {
@@ -217,9 +353,7 @@ function renderRows() {
 
     if (structureNames.has(mob.name)) {
       const img = row.querySelector(".mob-sprite");
-      if (img) {
-        img.style.display = "none";
-      }
+      if (img) img.style.display = "none";
     }
   });
 
@@ -298,6 +432,10 @@ function showWinOverlay() {
     winOverlay.classList.toggle("no-timer", !timerEnabled);
     winOverlay.hidden = false;
   }
+
+  stopBackgroundMusic();
+  playWinSound();
+  startConfettiRain();
 }
 
 function hideWinOverlay() {
@@ -305,14 +443,14 @@ function hideWinOverlay() {
     winOverlay.hidden = true;
     winOverlay.classList.remove("no-timer");
   }
+  stopWinSound();
+  stopConfettiRain();
   hasWon = false;
 }
 
 function resetProgress() {
   const confirmed = window.confirm("Are you sure you want to reset your progress?");
-  if (!confirmed) {
-    return;
-  }
+  if (!confirmed) return;
 
   guessed.clear();
   hideWinOverlay();
@@ -342,6 +480,9 @@ selectFilterBtn.addEventListener("click", () => {
   window.location.href = "mob-select.html";
 });
 newGameBtn.addEventListener("click", () => {
+  stopWinSound();
+  stopConfettiRain();
+  stopBackgroundMusic();
   window.location.href = "index.html";
 });
 overlay.addEventListener("click", closeSettings);
@@ -350,9 +491,7 @@ box.addEventListener("click", (event) => {
 });
 submitGuess.addEventListener("click", checkMob);
 mobInput.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    checkMob();
-  }
+  if (event.key === "Enter") checkMob();
 });
 mobInput.addEventListener("input", () => {
   maybeStartTimerFromInput();
@@ -368,7 +507,6 @@ if (timerToggle) {
       pauseTimer();
       timerWasRunningBeforeSettings = false;
     } else if (!box.hidden) {
-      // Keep paused while settings is open; start on next typing after closing settings.
       timerWasRunningBeforeSettings = false;
     } else {
       maybeStartTimerFromInput();
@@ -378,22 +516,35 @@ if (timerToggle) {
   });
 }
 
+if (musicToggle) {
+  musicToggle.checked = musicEnabled;
+  musicToggle.addEventListener("change", () => {
+    musicEnabled = musicToggle.checked;
+    writeMusicEnabled(musicEnabled);
+    applyMusicState();
+  });
+}
+
+document.addEventListener("pointerdown", () => {
+  hasUserInteracted = true;
+  applyMusicState();
+}, { once: true });
+
 document.addEventListener("keydown", (event) => {
+  hasUserInteracted = true;
+  applyMusicState();
+
   if (event.key === "Escape") {
     closeSettings();
     return;
   }
 
   const typingKey = event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey;
-  if (!typingKey) {
-    return;
-  }
+  if (!typingKey) return;
 
   const target = event.target;
   const isTypingField = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
-  if (isTypingField) {
-    return;
-  }
+  if (isTypingField) return;
 
   event.preventDefault();
   focusTypeBar();
@@ -402,4 +553,5 @@ document.addEventListener("keydown", (event) => {
 });
 
 updateTimerUI();
+applyMusicState();
 renderRows();
