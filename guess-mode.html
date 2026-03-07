@@ -72,6 +72,17 @@
       left: 12px;
     }
 
+    .previous-clues-btn {
+      right: 56px;
+      width: 36px;
+      height: 36px;
+    }
+
+    .previous-clues-btn svg {
+      width: 20px;
+      height: 20px;
+    }
+
     .settings-btn {
       right: 12px;
       width: 36px;
@@ -194,6 +205,302 @@
     .switch input:checked + .slider::before {
       transform: translateX(22px);
     }
+
+    main {
+      max-width: 760px;
+      margin: 24px auto;
+      padding: 0 20px;
+    }
+
+    .game-panel {
+      background: var(--bg-panel);
+      border: 2px solid var(--border-color);
+      border-radius: 10px;
+      padding: 24px;
+      box-shadow: 0 4px 12px #00000014;
+    }
+
+    .clue-number {
+      margin: 0 0 8px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #666;
+    }
+
+    body.dark-mode .clue-number {
+      color: #a0a0a0;
+    }
+
+    .clue-display {
+      min-height: 200px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 24px;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--bg-primary);
+      margin-bottom: 20px;
+    }
+
+    .clue-text {
+      font-size: 1.3rem;
+      font-weight: 700;
+      text-align: center;
+      color: var(--text-primary);
+      margin: 0;
+    }
+
+    .clue-image {
+      max-width: 200px;
+      max-height: 200px;
+      object-fit: contain;
+    }
+
+    .clue-image.silhouette {
+      filter: brightness(0);
+    }
+
+    .button-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .game-btn {
+      flex: 1;
+      min-width: 140px;
+      min-height: 52px;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      background: #39a845;
+      color: #fff;
+      font: inherit;
+      font-weight: 700;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: transform 0.1s ease;
+    }
+
+    .game-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .game-btn:active {
+      transform: translateY(0);
+    }
+
+    .game-btn.secondary {
+      background: #60a5fa;
+    }
+
+    .game-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .guess-input-container {
+      margin-top: 16px;
+      display: none;
+    }
+
+    .guess-input-container.active {
+      display: block;
+    }
+
+    .guess-input {
+      width: 100%;
+      min-height: 52px;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--bg-panel);
+      color: var(--text-primary);
+      padding: 12px;
+      font: inherit;
+      font-size: 1.1rem;
+      margin-bottom: 12px;
+    }
+
+    .submit-guess-btn {
+      width: 100%;
+      min-height: 52px;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      background: #f59e0b;
+      color: #fff;
+      font: inherit;
+      font-weight: 700;
+      font-size: 1.1rem;
+      cursor: pointer;
+    }
+
+    .feedback-message {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: 700;
+      text-align: center;
+      display: none;
+    }
+
+    .feedback-message.active {
+      display: block;
+    }
+
+    .feedback-message.error {
+      background: #fee2e2;
+      color: #7f1d1d;
+      border: 2px solid #7f1d1d;
+    }
+
+    .previous-clues-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9998;
+      background: #00000066;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .previous-clues-overlay[hidden] {
+      display: none;
+    }
+
+    .previous-clues-box {
+      width: min(600px, calc(100vw - 32px));
+      max-height: 80vh;
+      background: var(--bg-panel);
+      border: 2px solid var(--border-color);
+      border-radius: 10px;
+      padding: 24px;
+      box-shadow: 0 10px 30px #00000040;
+      overflow-y: auto;
+    }
+
+    .previous-clues-box h2 {
+      margin: 0 0 16px;
+      color: var(--text-primary);
+    }
+
+    .clue-history-item {
+      padding: 12px;
+      margin-bottom: 12px;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--bg-primary);
+    }
+
+    .clue-history-number {
+      font-weight: 700;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    body.dark-mode .clue-history-number {
+      color: #a0a0a0;
+    }
+
+    .clue-history-text {
+      color: var(--text-primary);
+    }
+
+    .close-clues-btn {
+      width: 100%;
+      margin-top: 16px;
+      min-height: 44px;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--bg-panel);
+      color: var(--text-primary);
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .win-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: #00000088;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .win-overlay[hidden] {
+      display: none;
+    }
+
+    .confetti-rain {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .confetti-piece {
+      position: absolute;
+      top: -24px;
+      width: 10px;
+      height: 16px;
+      opacity: 0.95;
+      border-radius: 2px;
+      animation-name: confetti-fall;
+      animation-timing-function: linear;
+      animation-fill-mode: forwards;
+    }
+
+    @keyframes confetti-fall {
+      0% { transform: translateY(-24px) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(110vh) rotate(720deg); opacity: 0.9; }
+    }
+
+    .win-content {
+      width: min(500px, calc(100vw - 32px));
+      background: var(--bg-panel);
+      border: 3px solid #39a845;
+      border-radius: 16px;
+      padding: 32px;
+      text-align: center;
+    }
+
+    .win-title {
+      margin: 0 0 16px;
+      font-size: 2.5rem;
+      color: #39a845;
+    }
+
+    .win-stats {
+      margin: 0 0 24px;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .win-mob-name {
+      margin: 0 0 24px;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .play-again-btn {
+      width: 100%;
+      min-height: 52px;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      background: #39a845;
+      color: #fff;
+      font: inherit;
+      font-weight: 700;
+      font-size: 1.1rem;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -209,11 +516,56 @@
         <path d="M4 13V11L6.1 10.3C6.3 9.7 6.5 9.2 6.9 8.7L5.9 6.7L7.3 5.3L9.3 6.3C9.8 5.9 10.3 5.7 10.9 5.5L11.6 3.5H13.6L14.3 5.5C14.9 5.7 15.4 5.9 15.9 6.3L17.9 5.3L19.3 6.7L18.3 8.7C18.7 9.2 18.9 9.7 19.1 10.3L21.2 11V13L19.1 13.7C18.9 14.3 18.7 14.8 18.3 15.3L19.3 17.3L17.9 18.7L15.9 17.7C15.4 18.1 14.9 18.3 14.3 18.5L13.6 20.5H11.6L10.9 18.5C10.3 18.3 9.8 18.1 9.3 17.7L7.3 18.7L5.9 17.3L6.9 15.3C6.5 14.8 6.3 14.3 6.1 13.7L4 13Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
       </svg>
     </button>
+    <button id="previous-clues-btn" class="icon-btn previous-clues-btn" type="button" aria-label="View previous clues">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2m-6 9 2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
     <h1>Guess Mode</h1>
   </header>
+  <main>
+    <section class="game-panel">
+      <p id="clue-number" class="clue-number">Clue 1 / 10</p>
+      <div id="clue-display" class="clue-display">
+        <p id="clue-text" class="clue-text">Loading...</p>
+      </div>
+      <div class="button-row">
+        <button id="guess-btn" class="game-btn" type="button">Guess</button>
+        <button id="next-clue-btn" class="game-btn secondary" type="button">Next Clue</button>
+      </div>
+      <div id="guess-input-container" class="guess-input-container">
+        <input id="guess-input" class="guess-input" type="text" placeholder="Type the mob name..." autocomplete="off" />
+        <button id="submit-guess-btn" class="submit-guess-btn" type="button">Submit Guess</button>
+      </div>
+      <div id="feedback-message" class="feedback-message"></div>
+    </section>
+  </main>
+  <div id="previous-clues-overlay" class="previous-clues-overlay" hidden>
+    <div class="previous-clues-box">
+      <h2>Previous Clues</h2>
+      <div id="clue-history"></div>
+      <button id="close-clues-btn" class="close-clues-btn" type="button">Close</button>
+    </div>
+  </div>
+  <div id="win-overlay" class="win-overlay" hidden>
+    <div id="confetti-rain" class="confetti-rain" aria-hidden="true"></div>
+    <div class="win-content">
+      <h2 class="win-title">🎉 You Won!</h2>
+      <p id="win-stats" class="win-stats"></p>
+      <p id="win-mob-name" class="win-mob-name"></p>
+      <button id="play-again-btn" class="play-again-btn" type="button">Play Again</button>
+    </div>
+  </div>
   <div id="settings-overlay" class="settings-overlay" hidden></div>
   <div id="settings-box" class="settings-box" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
     <h2 id="settings-title">Settings</h2>
+    <div class="timer-row">
+      <span class="timer-label">Music</span>
+      <label class="switch" aria-label="Toggle music">
+        <input id="music-toggle" type="checkbox" />
+        <span class="slider"></span>
+      </label>
+    </div>
     <div class="timer-row">
       <span class="timer-label">Dark Mode</span>
       <label class="switch" aria-label="Toggle dark mode">
@@ -221,72 +573,10 @@
         <span class="slider"></span>
       </label>
     </div>
-    <p>More settings coming soon.</p>
     <button id="close-settings" class="close-settings" type="button">Close</button>
   </div>
-  <p class="coming-soon">Coming soon!</p>
-  <script>
-    const DARK_MODE_KEY = "memory_mode_dark_mode_enabled";
-    const settingsBtn = document.getElementById("settings-btn");
-    const closeSettingsBtn = document.getElementById("close-settings");
-    const overlay = document.getElementById("settings-overlay");
-    const box = document.getElementById("settings-box");
-    const darkModeToggle = document.getElementById("dark-mode-toggle");
-
-    function readDarkModeEnabled() {
-      try {
-        const raw = localStorage.getItem(DARK_MODE_KEY);
-        if (raw === null) return false;
-        return raw === "true";
-      } catch {
-        return false;
-      }
-    }
-
-    function writeDarkModeEnabled(value) {
-      try {
-        localStorage.setItem(DARK_MODE_KEY, String(value));
-      } catch {
-        // Ignore localStorage write failure
-      }
-    }
-
-    function applyDarkMode() {
-      if (readDarkModeEnabled()) {
-        document.body.classList.add("dark-mode");
-      } else {
-        document.body.classList.remove("dark-mode");
-      }
-    }
-
-    function openSettings() {
-      overlay.hidden = false;
-      box.hidden = false;
-    }
-
-    function closeSettings() {
-      overlay.hidden = true;
-      box.hidden = true;
-    }
-
-    if (darkModeToggle) {
-      darkModeToggle.checked = readDarkModeEnabled();
-      darkModeToggle.addEventListener("change", () => {
-        writeDarkModeEnabled(darkModeToggle.checked);
-        applyDarkMode();
-      });
-    }
-
-    settingsBtn.addEventListener("click", openSettings);
-    closeSettingsBtn.addEventListener("click", closeSettings);
-    overlay.addEventListener("click", closeSettings);
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") {
-        closeSettings();
-      }
-    });
-
-    applyDarkMode();
-  </script>
+  <audio id="win-sound" src="assets/minecraft/win.mp3" preload="auto"></audio>
+  <audio id="bg-music" src="assets/minecraft/lofi.mp3" preload="auto" loop></audio>
+  <script type="module" src="./js/guess-mode/main.js"></script>
 </body>
 </html>
