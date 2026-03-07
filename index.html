@@ -5,11 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MemoryCraft</title>
   <style>
+    :root {
+      --bg-primary: #a8dcff;
+      --bg-panel: #f9f0da;
+      --bg-button: #fff;
+      --text-primary: #111;
+      --border-color: #000;
+    }
+
+    body.dark-mode {
+      --bg-primary: #1a1a1a;
+      --bg-panel: #2a2a2a;
+      --bg-button: #333;
+      --text-primary: #e5e5e5;
+      --border-color: #444;
+    }
+
     body {
       margin: 0;
       font-family: Arial, sans-serif;
       min-height: 100vh;
-      background: #a8dcff;
+      background: var(--bg-primary);
+      transition: background-color 0.3s ease;
     }
 
     header {
@@ -42,14 +59,15 @@
     }
 
     .panel {
-      border: 3px solid #000;
-      background: #f9f0da;
+      border: 3px solid var(--border-color);
+      background: var(--bg-panel);
       box-shadow: 8px 8px 0 #00000030;
       padding: 20px;
     }
 
     .panel p {
       margin: 0 0 16px;
+      color: var(--text-primary);
     }
 
     .mode-buttons {
@@ -62,9 +80,9 @@
       box-sizing: border-box;
       text-align: center;
       text-decoration: none;
-      border: 2px solid #000;
-      background: #fff;
-      color: #111;
+      border: 2px solid var(--border-color);
+      background: var(--bg-button);
+      color: var(--text-primary);
       width: 100%;
       min-height: 56px;
       border-radius: 10px;
@@ -98,5 +116,28 @@
       </div>
     </section>
   </main>
+  <script>
+    const DARK_MODE_KEY = "memory_mode_dark_mode_enabled";
+
+    function readDarkModeEnabled() {
+      try {
+        const raw = localStorage.getItem(DARK_MODE_KEY);
+        if (raw === null) return false;
+        return raw === "true";
+      } catch {
+        return false;
+      }
+    }
+
+    function applyDarkMode() {
+      if (readDarkModeEnabled()) {
+        document.body.classList.add("dark-mode");
+      } else {
+        document.body.classList.remove("dark-mode");
+      }
+    }
+
+    applyDarkMode();
+  </script>
 </body>
 </html>

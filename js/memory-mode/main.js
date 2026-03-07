@@ -1,9 +1,14 @@
-import { mobs, structures, getMobTags, getStructureTags } from "./data.js";
+import { mobs, structures, blocks as fallbackBlocks, getMobTags, getStructureTags, getBlockTags, loadLatestBlocks } from "./data.js";
 import { readSelectedFilters } from "./storage.js";
 import { setMobImage } from "./images.js";
 
 const TIMER_ENABLED_KEY = "memory_mode_timer_enabled";
 const MUSIC_ENABLED_KEY = "memory_mode_music_enabled";
+const DARK_MODE_KEY = "memory_mode_dark_mode_enabled";
+
+let hintsAvailable = 0;
+let hintsUsed = 0;
+let totalGuesses = 0;
 
 const settingsBtn = document.getElementById("settings-btn");
 const closeSettingsBtn = document.getElementById("close-settings");
@@ -24,6 +29,11 @@ const timerToggle = document.getElementById("timer-toggle");
 const timerValue = document.getElementById("timer-value");
 const headerTimer = document.getElementById("header-timer");
 const musicToggle = document.getElementById("music-toggle");
+const darkModeToggle = document.getElementById("dark-mode-toggle");
+const hintBtn = document.getElementById("hint-btn");
+const hintCounter = document.getElementById("hint-counter");
+const hintOverlay = document.getElementById("hint-overlay");
+const closeHintBtn = document.getElementById("close-hint");
 const bgMusic = document.getElementById("bg-music");
 const winSound = document.getElementById("win-sound");
 const confettiRain = document.getElementById("confetti-rain");
@@ -31,13 +41,20 @@ const confettiRain = document.getElementById("confetti-rain");
 const selectedFilters = readSelectedFilters();
 const locationFilters = ["nether", "overworld", "end"];
 const behaviorFilters = ["passive", "neutral", "hostile"];
-const reservedFilters = new Set(["mobs", "structures", ...locationFilters, ...behaviorFilters]);
+const biomeFilters = ["desert", "ocean", "forest", "plains", "mountains", "swamp", "jungle", "taiga", "savanna", "badlands", "snowy"];
+const reservedFilters = new Set(["mobs", "blocks", "structures", ...locationFilters, ...behaviorFilters, ...biomeFilters]);
 
 const selectedLocations = selectedFilters.filter((filter) => locationFilters.includes(filter));
 const selectedBehaviors = selectedFilters.filter((filter) => behaviorFilters.includes(filter));
+const selectedBiomes = selectedFilters.filter((filter) => biomeFilters.includes(filter));
 const selectedExtraMobFilters = selectedFilters.filter((filter) => !reservedFilters.has(filter));
 const includeMobs = selectedFilters.includes("mobs") || selectedExtraMobFilters.length > 0;
 const includeStructures = selectedFilters.includes("structures");
+const includeBlocks = selectedFilters.includes("blocks");
+
+let blocks = [...fallbackBlocks];
+let activeMobs = [];
+let nonVisualNames = new Set();
 
 function matchesLocation(tags) {
   return selectedLocations.length === 0 || selectedLocations.some((filter) => tags.includes(filter));
@@ -47,33 +64,62 @@ function matchesBehavior(tags) {
   return selectedBehaviors.length === 0 || selectedBehaviors.some((filter) => tags.includes(filter));
 }
 
-const activeMobs = [
-  ...(includeMobs
-    ? mobs.filter((mob) => {
-        const tags = getMobTags(mob.name);
-        const matchesExtra = selectedExtraMobFilters.every((filter) => tags.includes(filter));
-        return matchesLocation(tags) && matchesBehavior(tags) && matchesExtra;
-      })
-    : []),
-  ...(includeStructures
-    ? structures.filter((structure) => {
-        const tags = getStructureTags(structure.name);
-        return matchesLocation(tags);
-      })
-    : [])
-];
+function matchesBiome(tags) {
+  return selectedBiomes.length === 0 || selectedBiomes.some((filter) => tags.includes(filter));
+}
 
-const structureNames = new Set(structures.map((item) => item.name));
+function joinTypeNames(names) {
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return names[0] + " or " + names[1];
+  return names.slice(0, -1).join(", ") + ", or " + names[names.length - 1];
+}
 
-if (includeStructures && !includeMobs) {
-  mobInput.placeholder = "Type structure name";
-} else if (includeStructures && includeMobs) {
-  mobInput.placeholder = "Type mob or structure name";
+function setInputPlaceholder() {
+  const types = [];
+  if (includeMobs) types.push("mob name");
+  if (includeStructures) types.push("structure name");
+  if (includeBlocks) types.push("block name");
+  if (types.length > 0) {
+    mobInput.placeholder = "Type " + joinTypeNames(types);
+  }
+}
+
+function rebuildActiveList() {
+  activeMobs = [
+    ...(includeMobs
+      ? mobs.filter((mob) => {
+          const tags = getMobTags(mob.name);
+          const matchesExtra = selectedExtraMobFilters.every((filter) => tags.includes(filter));
+          return matchesLocation(tags) && matchesBehavior(tags) && matchesExtra;
+        })
+      : []),
+    ...(includeStructures
+      ? structures.filter((structure) => {
+          const tags = getStructureTags(structure.name);
+          return matchesLocation(tags);
+        })
+      : []),
+    ...(includeBlocks
+      ? blocks.filter((block) => {
+          const tags = getBlockTags(block.name);
+          return matchesLocation(tags) && matchesBiome(tags);
+        })
+      : []),
+  ];
+
+  nonVisualNames = new Set([
+    ...structures.map((item) => item.name),
+    ...blocks.map((item) => item.name),
+  ]);
+  rebuildGuessAliasMap();
+  setInputPlaceholder();
 }
 
 let hasWon = false;
 const guessed = new Set();
 const rowMap = new Map();
+const canonicalGuessMap = new Map();
+const blockNameSet = new Set();
 
 let timerEnabled = readTimerEnabled();
 let timerElapsedMs = 0;
@@ -82,6 +128,7 @@ let timerIntervalId = null;
 let timerWasRunningBeforeSettings = false;
 
 let musicEnabled = readMusicEnabled();
+let darkModeEnabled = readDarkModeEnabled();
 let hasUserInteracted = false;
 let confettiIntervalId = null;
 let confettiAutoStopTimeoutId = null;
@@ -91,6 +138,39 @@ function normalizeMobName(value) {
   return value.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
+function addGuessAlias(alias, canonicalName) {
+  if (!alias) return;
+  if (!canonicalGuessMap.has(alias)) {
+    canonicalGuessMap.set(alias, canonicalName);
+  }
+}
+
+function rebuildGuessAliasMap() {
+  canonicalGuessMap.clear();
+  blockNameSet.clear();
+
+  blocks.forEach((block) => blockNameSet.add(block.name));
+
+  activeMobs.forEach((entry) => {
+    const canonical = entry.name;
+    addGuessAlias(canonical, canonical);
+
+    if (!blockNameSet.has(canonical)) return;
+
+    if (canonical.endsWith(" block")) {
+      addGuessAlias(canonical.slice(0, -6), canonical);
+    }
+
+    if (canonical.endsWith(" ore")) {
+      addGuessAlias(canonical.slice(0, -4), canonical);
+
+      if (canonical.startsWith("deepslate ")) {
+        const baseOre = canonical.replace(/^deepslate /, "").replace(/ ore$/, "");
+        addGuessAlias(baseOre, canonical);
+      }
+    }
+  });
+}
 function formatDisplayName(value) {
   return value.replace(/\b[a-z]/g, (char) => char.toUpperCase());
 }
@@ -194,6 +274,32 @@ function writeMusicEnabled(value) {
     localStorage.setItem(MUSIC_ENABLED_KEY, String(value));
   } catch {
     // Ignore localStorage write failure
+  }
+}
+
+function readDarkModeEnabled() {
+  try {
+    const raw = localStorage.getItem(DARK_MODE_KEY);
+    if (raw === null) return false;
+    return raw === "true";
+  } catch {
+    return false;
+  }
+}
+
+function writeDarkModeEnabled(value) {
+  try {
+    localStorage.setItem(DARK_MODE_KEY, String(value));
+  } catch {
+    // Ignore localStorage write failure
+  }
+}
+
+function applyDarkMode() {
+  if (darkModeEnabled) {
+    document.body.classList.add("dark-mode");
+  } else {
+    document.body.classList.remove("dark-mode");
   }
 }
 
@@ -330,6 +436,69 @@ function updateProgress() {
   }
 }
 
+function updateHintCounter() {
+  if (hintCounter) {
+    hintCounter.textContent = hintsAvailable;
+  }
+  if (hintBtn) {
+    hintBtn.disabled = hintsAvailable === 0;
+    hintBtn.style.opacity = hintsAvailable === 0 ? "0.5" : "1";
+    hintBtn.style.cursor = hintsAvailable === 0 ? "not-allowed" : "pointer";
+  }
+}
+
+function getRandomUnguessedItem() {
+  const unguessed = activeMobs.filter(item => !guessed.has(item.name));
+  if (unguessed.length === 0) return null;
+  return unguessed[Math.floor(Math.random() * unguessed.length)];
+}
+
+function useHint() {
+  if (hintsAvailable === 0) {
+    guessMessage.textContent = "No hints available. Make 3 more guesses to earn a hint.";
+    return;
+  }
+
+  const item = getRandomUnguessedItem();
+  if (!item) {
+    guessMessage.textContent = "All items already guessed!";
+    return;
+  }
+
+  hintsAvailable--;
+  hintsUsed++;
+  updateHintCounter();
+
+  const firstThree = item.name.substring(0, 3);
+  
+  // Show hint with image
+  const hintImage = document.getElementById("hint-image");
+  const hintOverlay = document.getElementById("hint-overlay");
+  const hintText = document.getElementById("hint-text");
+  
+  if (hintOverlay && hintImage && hintText) {
+    hintText.textContent = `Hint: Starts with "${firstThree}..."`;
+    
+    // Set image if not a non-visual item
+    if (!nonVisualNames.has(item.name)) {
+      hintImage.style.display = "block";
+      setMobImage(hintImage, item);
+    } else {
+      hintImage.style.display = "none";
+    }
+    
+    hintOverlay.hidden = false;
+    closeSettings();
+  } else {
+    // Fallback to message only
+    guessMessage.textContent = `Hint: Starts with "${firstThree}..."`;
+    guessMessage.style.color = "#f59e0b";
+    setTimeout(() => {
+      guessMessage.style.color = "";
+    }, 3000);
+  }
+}
+
 function renderRows() {
   mobBoard.innerHTML = "";
   rowMap.clear();
@@ -351,7 +520,7 @@ function renderRows() {
     mobBoard.appendChild(row);
     rowMap.set(mob.name, row);
 
-    if (structureNames.has(mob.name)) {
+    if (nonVisualNames.has(mob.name)) {
       const img = row.querySelector(".mob-sprite");
       if (img) img.style.display = "none";
     }
@@ -367,32 +536,44 @@ function checkMob() {
     return;
   }
 
-  const mob = activeMobs.find((item) => item.name === value);
+  const canonicalName = canonicalGuessMap.get(value) || value;
+  const mob = activeMobs.find((item) => item.name === canonicalName);
+
   if (!mob) {
     guessMessage.textContent = `"${formatDisplayName(value)}" is not in the list.`;
-  } else if (guessed.has(value)) {
-    guessMessage.textContent = `"${formatDisplayName(value)}" is already guessed.`;
+    totalGuesses++;
+  } else if (guessed.has(canonicalName)) {
+    guessMessage.textContent = `"${formatDisplayName(mob.name)}" is already guessed.`;
   } else {
-    guessed.add(value);
-    const row = rowMap.get(value);
+    guessed.add(canonicalName);
+    totalGuesses++;
+    
+    // Award hint every 3 correct guesses
+    if (totalGuesses % 3 === 0) {
+      hintsAvailable++;
+      updateHintCounter();
+      guessMessage.textContent = `Correct: ${formatDisplayName(mob.name)} - Hint earned! (${hintsAvailable} available)`;
+    } else {
+      guessMessage.textContent = `Correct: ${formatDisplayName(mob.name)}`;
+    }
+    
+    const row = rowMap.get(canonicalName);
     if (row) {
       row.classList.add("guessed");
       const img = row.querySelector(".mob-sprite");
-      if (!structureNames.has(mob.name)) {
+      if (!nonVisualNames.has(mob.name)) {
         setMobImage(img, mob);
       }
       row.scrollIntoView({ behavior: "smooth", block: "center" });
       row.classList.add("focused");
       setTimeout(() => row.classList.remove("focused"), 1400);
     }
-    guessMessage.textContent = `Correct: ${formatDisplayName(value)}`;
   }
 
   updateProgress();
   mobInput.value = "";
   mobInput.focus();
 }
-
 function focusTypeBar() {
   guessRow.scrollIntoView({ behavior: "smooth", block: "start" });
   mobInput.focus();
@@ -420,16 +601,24 @@ function showWinOverlay() {
 
   if (winTime) {
     if (timerEnabled) {
+      const timeText = "Time: " + formatDuration(timerElapsedMs);
+      const hintsText = hintsUsed > 0 ? ` | Hints used: ${hintsUsed}` : "";
       winTime.hidden = false;
-      winTime.textContent = "Time: " + formatDuration(timerElapsedMs);
+      winTime.textContent = timeText + hintsText;
     } else {
-      winTime.hidden = true;
-      winTime.textContent = "";
+      const hintsText = hintsUsed > 0 ? `Hints used: ${hintsUsed}` : "";
+      if (hintsText) {
+        winTime.hidden = false;
+        winTime.textContent = hintsText;
+      } else {
+        winTime.hidden = true;
+        winTime.textContent = "";
+      }
     }
   }
 
   if (winOverlay) {
-    winOverlay.classList.toggle("no-timer", !timerEnabled);
+    winOverlay.classList.toggle("no-timer", !timerEnabled && hintsUsed === 0);
     winOverlay.hidden = false;
   }
 
@@ -449,20 +638,37 @@ function hideWinOverlay() {
 }
 
 function resetProgress() {
+  console.log('resetProgress function called');
   const confirmed = window.confirm("Are you sure you want to reset your progress?");
+  console.log('User confirmed:', confirmed);
   if (!confirmed) return;
 
+  console.log('Clearing guessed items, count before:', guessed.size);
   guessed.clear();
+  totalGuesses = 0;
+  hintsAvailable = 0;
+  hintsUsed = 0;
+  updateHintCounter();
+  console.log('Guessed items after clear:', guessed.size);
+  
   hideWinOverlay();
   resetTimer();
 
+  console.log('Resetting rows, total rows:', rowMap.size);
   rowMap.forEach((row, name) => {
     row.classList.remove("guessed", "focused");
     const img = row.querySelector(".mob-sprite");
     if (img) {
       img.onerror = null;
       img.removeAttribute("src");
+      img.src = "";
       img.alt = `${formatDisplayName(name)} image`;
+      img.style.opacity = "0";
+    }
+    const nameEl = row.querySelector(".mob-name");
+    if (nameEl) {
+      nameEl.style.color = "transparent";
+      nameEl.style.userSelect = "none";
     }
   });
 
@@ -471,11 +677,21 @@ function resetProgress() {
   mobInput.value = "";
   closeSettings();
   focusTypeBar();
+  console.log('Reset complete');
 }
 
 settingsBtn.addEventListener("click", openSettings);
 closeSettingsBtn.addEventListener("click", closeSettings);
-resetProgressBtn.addEventListener("click", resetProgress);
+console.log('resetProgressBtn element:', resetProgressBtn);
+if (resetProgressBtn) {
+  resetProgressBtn.addEventListener("click", () => {
+    console.log('Reset button clicked!');
+    resetProgress();
+  });
+  console.log('Reset button event listener added');
+} else {
+  console.error('resetProgressBtn is null or undefined');
+}
 selectFilterBtn.addEventListener("click", () => {
   window.location.href = "mob-select.html";
 });
@@ -525,6 +741,35 @@ if (musicToggle) {
   });
 }
 
+if (darkModeToggle) {
+  darkModeToggle.checked = darkModeEnabled;
+  darkModeToggle.addEventListener("change", () => {
+    darkModeEnabled = darkModeToggle.checked;
+    writeDarkModeEnabled(darkModeEnabled);
+    applyDarkMode();
+  });
+}
+
+if (hintBtn) {
+  hintBtn.addEventListener("click", useHint);
+}
+
+if (closeHintBtn) {
+  closeHintBtn.addEventListener("click", () => {
+    if (hintOverlay) {
+      hintOverlay.hidden = true;
+    }
+  });
+}
+
+if (hintOverlay) {
+  hintOverlay.addEventListener("click", (e) => {
+    if (e.target === hintOverlay) {
+      hintOverlay.hidden = true;
+    }
+  });
+}
+
 document.addEventListener("pointerdown", () => {
   hasUserInteracted = true;
   applyMusicState();
@@ -535,6 +780,10 @@ document.addEventListener("keydown", (event) => {
   applyMusicState();
 
   if (event.key === "Escape") {
+    if (hintOverlay && !hintOverlay.hidden) {
+      hintOverlay.hidden = true;
+      return;
+    }
     closeSettings();
     return;
   }
@@ -552,6 +801,27 @@ document.addEventListener("keydown", (event) => {
   maybeStartTimerFromInput();
 });
 
-updateTimerUI();
-applyMusicState();
-renderRows();
+async function initGame() {
+  try {
+    blocks = await loadLatestBlocks();
+  } catch {
+    blocks = [...fallbackBlocks];
+  }
+
+  rebuildActiveList();
+  updateTimerUI();
+  applyMusicState();
+  applyDarkMode();
+  renderRows();
+  updateHintCounter();
+  
+  // Ensure reset button is clickable
+  if (resetProgressBtn) {
+    resetProgressBtn.style.pointerEvents = 'auto';
+    console.log('Reset button found and enabled');
+  } else {
+    console.error('Reset button not found!');
+  }
+}
+
+initGame();

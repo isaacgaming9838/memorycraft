@@ -5,11 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MemoryCraft - Guess Mode</title>
   <style>
+    :root {
+      --bg-primary: #fff8eb;
+      --bg-panel: #fff;
+      --text-primary: #111;
+      --border-color: #000;
+    }
+
+    body.dark-mode {
+      --bg-primary: #1a1a1a;
+      --bg-panel: #2a2a2a;
+      --text-primary: #e5e5e5;
+      --border-color: #444;
+    }
+
     body {
       margin: 0;
       font-family: Arial, sans-serif;
       min-height: 100vh;
-      background: #fff8eb;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
 
     header {
@@ -79,12 +95,12 @@
       left: 50%;
       transform: translate(-50%, -50%);
       width: min(460px, calc(100vw - 32px));
-      background: #fff;
-      border: 2px solid #000;
+      background: var(--bg-panel);
+      border: 2px solid var(--border-color);
       border-radius: 10px;
       padding: 22px;
       box-shadow: 0 10px 30px #00000040;
-      color: #111;
+      color: var(--text-primary);
     }
 
     .settings-box h2 {
@@ -111,9 +127,73 @@
       margin: 24px 20px;
       font-size: 2rem;
       font-weight: 700;
-      color: #111;
+      color: var(--text-primary);
     }
 
+    .timer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 0 0 10px;
+      padding: 8px 10px;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
+    body.dark-mode .timer-row {
+      background: #333;
+    }
+
+    .timer-label {
+      font-weight: 700;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 52px;
+      height: 30px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      inset: 0;
+      cursor: pointer;
+      background: #d1d5db;
+      border: 2px solid var(--border-color);
+      border-radius: 999px;
+      transition: background 0.2s ease;
+    }
+
+    .slider::before {
+      content: "";
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      left: 3px;
+      top: 3px;
+      background: #fff;
+      border: 2px solid var(--border-color);
+      border-radius: 50%;
+      transition: transform 0.2s ease;
+      box-sizing: border-box;
+    }
+
+    .switch input:checked + .slider {
+      background: #86efac;
+    }
+
+    .switch input:checked + .slider::before {
+      transform: translateX(22px);
+    }
   </style>
 </head>
 <body>
@@ -134,15 +214,50 @@
   <div id="settings-overlay" class="settings-overlay" hidden></div>
   <div id="settings-box" class="settings-box" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
     <h2 id="settings-title">Settings</h2>
-    <p>Settings options coming soon.</p>
+    <div class="timer-row">
+      <span class="timer-label">Dark Mode</span>
+      <label class="switch" aria-label="Toggle dark mode">
+        <input id="dark-mode-toggle" type="checkbox" />
+        <span class="slider"></span>
+      </label>
+    </div>
+    <p>More settings coming soon.</p>
     <button id="close-settings" class="close-settings" type="button">Close</button>
   </div>
   <p class="coming-soon">Coming soon!</p>
   <script>
+    const DARK_MODE_KEY = "memory_mode_dark_mode_enabled";
     const settingsBtn = document.getElementById("settings-btn");
     const closeSettingsBtn = document.getElementById("close-settings");
     const overlay = document.getElementById("settings-overlay");
     const box = document.getElementById("settings-box");
+    const darkModeToggle = document.getElementById("dark-mode-toggle");
+
+    function readDarkModeEnabled() {
+      try {
+        const raw = localStorage.getItem(DARK_MODE_KEY);
+        if (raw === null) return false;
+        return raw === "true";
+      } catch {
+        return false;
+      }
+    }
+
+    function writeDarkModeEnabled(value) {
+      try {
+        localStorage.setItem(DARK_MODE_KEY, String(value));
+      } catch {
+        // Ignore localStorage write failure
+      }
+    }
+
+    function applyDarkMode() {
+      if (readDarkModeEnabled()) {
+        document.body.classList.add("dark-mode");
+      } else {
+        document.body.classList.remove("dark-mode");
+      }
+    }
 
     function openSettings() {
       overlay.hidden = false;
@@ -154,6 +269,14 @@
       box.hidden = true;
     }
 
+    if (darkModeToggle) {
+      darkModeToggle.checked = readDarkModeEnabled();
+      darkModeToggle.addEventListener("change", () => {
+        writeDarkModeEnabled(darkModeToggle.checked);
+        applyDarkMode();
+      });
+    }
+
     settingsBtn.addEventListener("click", openSettings);
     closeSettingsBtn.addEventListener("click", closeSettings);
     overlay.addEventListener("click", closeSettings);
@@ -162,6 +285,8 @@
         closeSettings();
       }
     });
+
+    applyDarkMode();
   </script>
 </body>
 </html>

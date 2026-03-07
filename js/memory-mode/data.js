@@ -1,6 +1,6 @@
 const MOB_RENDER_BASE = "https://mc-heads.net/mob";
 
-export const FILTER_OPTIONS = ["mobs", "nether", "overworld", "end", "neutral", "passive", "hostile", "structures", "test"];
+export const FILTER_OPTIONS = ["mobs", "blocks", "nether", "overworld", "end", "neutral", "passive", "hostile", "structures", "test", "desert", "ocean", "forest", "plains", "mountains", "swamp", "jungle", "taiga", "savanna", "badlands", "snowy"];
 
 export function getDefaultFilters() {
   return ["mobs", "nether", "overworld", "end", "neutral", "passive", "hostile"];
@@ -34,6 +34,278 @@ export function getStructureTags(name) {
   return tags;
 }
 
+const NETHER_BLOCK_HINTS = [
+  "nether",
+  "netherrack",
+  "blackstone",
+  "basalt",
+  "crimson",
+  "warped",
+  "soul_",
+  "shroomlight",
+  "nylium",
+  "quartz",
+  "glowstone",
+  "magma",
+  "ancient_debris",
+  "gilded_blackstone",
+  "weeping_vines",
+  "twisting_vines",
+  "netherite",
+  "respawn_anchor",
+  "lodestone"
+];
+
+const END_BLOCK_HINTS = [
+  "end_",
+  "purpur",
+  "chorus",
+  "dragon_egg"
+];
+
+const BIOME_BLOCK_MAP = {
+  desert: ["sand", "sandstone", "cactus", "dead bush", "terracotta"],
+  ocean: ["prismarine", "sea lantern", "kelp", "seagrass", "coral", "sponge", "wet sponge"],
+  forest: ["oak", "birch", "dark oak", "mushroom", "podzol"],
+  plains: ["grass", "dandelion", "poppy", "sunflower"],
+  mountains: ["stone", "emerald", "snow", "ice", "packed ice", "goat horn"],
+  swamp: ["lily pad", "slime", "clay", "mangrove", "mud"],
+  jungle: ["jungle", "bamboo", "cocoa", "melon", "panda"],
+  taiga: ["spruce", "fern", "sweet berry", "fox"],
+  savanna: ["acacia", "tall grass"],
+  badlands: ["red sand", "terracotta", "gold"],
+  snowy: ["snow", "ice", "packed ice", "blue ice", "powder snow", "igloo"]
+};
+
+function toBlockId(name) {
+  return String(name).toLowerCase().trim().replace(/\s+/g, "_");
+}
+
+export function getBlockTags(name) {
+  const id = toBlockId(name);
+
+  const hasNetherHint = NETHER_BLOCK_HINTS.some((hint) => id.includes(hint));
+  const hasEndHint = END_BLOCK_HINTS.some((hint) => id.includes(hint));
+
+  const tags = ["blocks"];
+
+  if (hasNetherHint) tags.push("nether");
+  if (hasEndHint) tags.push("end");
+
+  if (!hasNetherHint && !hasEndHint) {
+    tags.push("overworld");
+  }
+
+  // Add biome tags
+  for (const [biome, hints] of Object.entries(BIOME_BLOCK_MAP)) {
+    if (hints.some((hint) => id.includes(hint) || name.toLowerCase().includes(hint))) {
+      tags.push(biome);
+    }
+  }
+
+  return [...new Set(tags)];
+}
+
+function parseVersion(version) {
+  return version.split(".").map((part) => Number.parseInt(part, 10) || 0);
+}
+
+function compareVersionsDesc(a, b) {
+  const pa = parseVersion(a);
+  const pb = parseVersion(b);
+  const len = Math.max(pa.length, pb.length);
+
+  for (let i = 0; i < len; i += 1) {
+    const da = pa[i] ?? 0;
+    const db = pb[i] ?? 0;
+    if (da !== db) return db - da;
+  }
+
+  return 0;
+}
+
+async function fetchJson(url) {
+  const response = await fetch(url, { cache: "no-cache" });
+  if (!response.ok) throw new Error("Failed to fetch " + url);
+  return response.json();
+}
+
+const EXCLUDED_BLOCK_NAMES = new Set([
+  "leaf litter",
+  "fire",
+  "soul fire",
+  "moving piston",
+  "void air",
+  "cave air"
+]);
+
+const EXCLUDED_BLOCK_HINTS = [
+  "potted ",
+  " wall",
+  "banner",
+  "head",
+  "skull",
+  "wall ",
+  "_wall",
+  "command block",
+  "jigsaw",
+  "structure block",
+  "structure void",
+  "candle",
+  "carpet",
+  "pressure plate",
+  "button",
+  "door",
+  "trapdoor",
+  "fence",
+  "slab",
+  "stairs",
+  "sign",
+  "coral",
+  "sapling",
+  "leaves",
+  "wood",
+  "log",
+  "stem",
+  "hyphae",
+  "stripped",
+  "infested",
+  "spawner",
+  "piston",
+  "redstone",
+  "repeater",
+  "comparator",
+  "observer",
+  "dispenser",
+  "dropper",
+  "hopper",
+  "rail",
+  "torch",
+  "lantern",
+  "campfire",
+  "brewing stand",
+  "cauldron",
+  "composter",
+  "lectern",
+  "loom",
+  "smoker",
+  "blast furnace",
+  "grindstone",
+  "stonecutter",
+  "smithing table",
+  "cartography table",
+  "fletching table",
+  "barrel",
+  "bell",
+  "bed",
+  "cake",
+  "conduit",
+  "beacon",
+  "anvil",
+  "enchanting table",
+  "ender chest",
+  "shulker box",
+  "respawn anchor",
+  "lodestone",
+  "target",
+  "honey block",
+  "slime block",
+  "tnt",
+  "pumpkin",
+  "melon",
+  "hay block",
+  "dried kelp block",
+  "bone block",
+  "nether wart block",
+  "warped wart block",
+  "shroomlight",
+  "sea pickle",
+  "turtle egg",
+  "sniffer egg",
+  "froglight",
+  "sculk sensor",
+  "sculk shrieker",
+  "sculk catalyst",
+  "calibrated sculk sensor",
+  "reinforced deepslate",
+  "crafter",
+  "trial spawner",
+  "vault",
+  "heavy core",
+  "decorated pot",
+  "suspicious",
+  "budding amethyst",
+  "amethyst cluster",
+  "amethyst bud",
+  "pointed dripstone",
+  "big dripleaf",
+  "small dripleaf",
+  "spore blossom",
+  "azalea",
+  "flowering azalea",
+  "moss carpet",
+  "glow lichen",
+  "hanging roots",
+  "rooted dirt",
+  "powder snow",
+  "lightning rod",
+  "copper bulb",
+  "copper grate",
+  "copper trapdoor",
+  "copper door",
+  "chiseled copper",
+  "cut copper",
+  "exposed",
+  "weathered",
+  "oxidized",
+  "waxed"
+];
+
+function isAllowedBlockName(name) {
+  if (EXCLUDED_BLOCK_NAMES.has(name)) return false;
+  return !EXCLUDED_BLOCK_HINTS.some((hint) => name.includes(hint));
+}
+
+export async function loadLatestBlocks() {
+  const base = "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data";
+  const fallbackVersions = ["1.21.4", "1.21.3", "1.21.1", "1.21"];
+
+  let versions = [];
+  try {
+    const dataPaths = await fetchJson(`${base}/dataPaths.json`);
+    versions = Object.keys(dataPaths.pc || {})
+      .filter((version) => /^\d+\.\d+(\.\d+)?$/.test(version))
+      .sort(compareVersionsDesc)
+      .slice(0, 8);
+  } catch {
+    versions = [];
+  }
+
+  const candidates = [...new Set([...versions, ...fallbackVersions])]
+    .map((version) => `${base}/pc/${version}/blocks.json`);
+
+  for (const url of candidates) {
+    try {
+      const rawBlocks = await fetchJson(url);
+      if (!Array.isArray(rawBlocks) || rawBlocks.length === 0) continue;
+
+      const names = rawBlocks
+        .map((entry) => String(entry.name || "").trim())
+        .filter(Boolean)
+        .map((name) => name.replace(/_/g, " "))
+        .filter(isAllowedBlockName);
+
+      const unique = [...new Set(names)].sort((a, b) => a.localeCompare(b));
+      if (unique.length > 0) {
+        return unique.map((blockName) => ({ name: blockName, head: "stone", sprite: "" }));
+      }
+    } catch {
+      // Try next source/version.
+    }
+  }
+
+  return blocks;
+}
 const baseMobs = [
   { name: "allay", head: "allay" },
   { name: "armadillo", head: "armadillo" },
@@ -167,5 +439,54 @@ const structureNames = [
 export const structures = structureNames.map((name) => ({
   name,
   head: "chest",
+  sprite: ""
+}));
+
+const blockNames = [
+  "ancient debris",
+  "basalt",
+  "blackstone",
+  "cobblestone",
+  "crimson nylium",
+  "dirt",
+  "end stone",
+  "glowstone",
+  "magma block",
+  "nether bricks",
+  "nether gold ore",
+  "netherrack",
+  "oak planks",
+  "purpur block",
+  "quartz ore",
+  "soul sand",
+  "stone",
+  "warped nylium",
+  "andesite",
+  "calcite",
+  "clay",
+  "coal ore",
+  "copper ore",
+  "deepslate",
+  "diamond ore",
+  "diorite",
+  "emerald ore",
+  "granite",
+  "grass block",
+  "gravel",
+  "iron ore",
+  "lapis ore",
+  "moss block",
+  "mud",
+  "obsidian",
+  "redstone ore",
+  "sand",
+  "sandstone",
+  "spruce planks",
+  "tuff"
+];
+
+export const blocks = blockNames.map((name) => ({
+  name,
+  head: "stone",
   sprite: ""
 }));

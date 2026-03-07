@@ -3,21 +3,30 @@ const MOB_HEAD_BASE = "https://mc-heads.net/head";
 const LOCAL_MOB_BASE = "assets/mobs";
 
 function getMobImageCandidates(mob) {
-  const variants = [mob.head, mob.name.replace(/\s+/g, "_"), mob.head.replace(/_/g, "")];
   const urls = [];
+  
+  // Priority 1: Sprite override (if specified)
   if (mob.spriteOverride) {
     urls.push(mob.spriteOverride);
   }
-
-  variants.forEach((key) => {
-    urls.push(`${LOCAL_MOB_BASE}/${key}.png`);
-    urls.push(`${MOB_RENDER_BASE}/${key}.png`);
-    urls.push(`${MOB_RENDER_BASE}/${key}`);
-    urls.push(`${MOB_RENDER_BASE}/${key}/160`);
-  });
-
-  urls.push(`${MOB_HEAD_BASE}/${mob.head}/160`);
-  urls.push(`${MOB_HEAD_BASE}/${mob.head}`);
+  
+  // Priority 2: Pre-configured sprite URL (full body render)
+  if (mob.sprite) {
+    urls.push(mob.sprite);
+  }
+  
+  // Priority 3: Full body renders from mc-heads.net
+  const key = mob.head || mob.name.replace(/\s+/g, "_");
+  urls.push(`${MOB_RENDER_BASE}/${key}/160`);
+  urls.push(`${MOB_RENDER_BASE}/${key}`);
+  
+  // Priority 4: Local assets
+  urls.push(`${LOCAL_MOB_BASE}/${key}.png`);
+  
+  // Priority 5: Head-only renders (fallback)
+  urls.push(`${MOB_HEAD_BASE}/${key}/160`);
+  urls.push(`${MOB_HEAD_BASE}/${key}`);
+  
   return [...new Set(urls)];
 }
 

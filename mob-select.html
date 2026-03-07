@@ -5,11 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MemoryCraft - Select</title>
   <style>
+    :root {
+      --bg-primary: #eaf7ff;
+      --bg-panel: #fff;
+      --bg-button: #fff;
+      --text-primary: #111;
+      --border-color: #000;
+    }
+
+    body.dark-mode {
+      --bg-primary: #1a1a1a;
+      --bg-panel: #2a2a2a;
+      --bg-button: #333;
+      --text-primary: #e5e5e5;
+      --border-color: #444;
+    }
+
     body {
       margin: 0;
       font-family: Arial, sans-serif;
       min-height: 100vh;
-      background: #eaf7ff;
+      background: var(--bg-primary);
+      transition: background-color 0.3s ease;
     }
 
     header {
@@ -54,8 +71,8 @@
     }
 
     .panel {
-      background: #fff;
-      border: 2px solid #000;
+      background: var(--bg-panel);
+      border: 2px solid var(--border-color);
       border-radius: 10px;
       padding: 16px;
     }
@@ -69,12 +86,13 @@
 
     .btn {
       min-height: 44px;
-      border: 2px solid #000;
+      border: 2px solid var(--border-color);
       border-radius: 8px;
       font: inherit;
       font-weight: 700;
       cursor: pointer;
-      background: #fff;
+      background: var(--bg-button);
+      color: var(--text-primary);
     }
 
     .btn.primary {
@@ -93,15 +111,29 @@
       margin-bottom: 14px;
     }
 
+    .filter-section {
+      margin-bottom: 16px;
+    }
+
+    .filter-heading {
+      margin: 0 0 8px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      padding: 4px 0;
+      border-bottom: 2px solid var(--border-color);
+    }
+
     .option {
       display: flex;
       align-items: center;
       gap: 10px;
       min-height: 44px;
-      border: 2px solid #000;
+      border: 2px solid var(--border-color);
       border-radius: 8px;
       padding: 8px 10px;
-      background: #fff;
+      background: var(--bg-button);
+      color: var(--text-primary);
       cursor: pointer;
       user-select: none;
       text-transform: capitalize;
@@ -157,15 +189,46 @@
     const selectAllButton = document.getElementById("select-all");
     const unselectAllButton = document.getElementById("unselect-all");
 
-    function render() {
+    const BIOME_FILTERS = ["desert", "ocean", "forest", "plains", "mountains", "swamp", "jungle", "taiga", "savanna", "badlands", "snowy"];
+    const LOCATION_FILTERS = ["nether", "overworld", "end"];
+    const BEHAVIOR_FILTERS = ["neutral", "passive", "hostile"];
+    const TYPE_FILTERS = ["mobs", "blocks", "structures"];
+
+    function createSection(title, filters) {
+      const section = document.createElement("div");
+      section.className = "filter-section";
+      
+      const heading = document.createElement("h3");
+      heading.className = "filter-heading";
+      heading.textContent = title;
+      section.appendChild(heading);
+
       const selected = new Set(readSelectedFilters());
-      optionsRoot.innerHTML = "";
-      FILTER_OPTIONS.forEach((name) => {
+      
+      filters.forEach((name) => {
         const label = document.createElement("label");
         label.className = "option";
         label.innerHTML = `<input type="checkbox" value="${name}" ${selected.has(name) ? "checked" : ""} /> ${name}`;
-        optionsRoot.appendChild(label);
+        section.appendChild(label);
       });
+
+      return section;
+    }
+
+    function render() {
+      optionsRoot.innerHTML = "";
+      
+      optionsRoot.appendChild(createSection("Types", TYPE_FILTERS));
+      optionsRoot.appendChild(createSection("Locations", LOCATION_FILTERS));
+      optionsRoot.appendChild(createSection("Mob Behavior", BEHAVIOR_FILTERS));
+      optionsRoot.appendChild(createSection("Biomes (Blocks)", BIOME_FILTERS));
+      
+      // Add any remaining filters that don't fit in categories
+      const categorized = new Set([...TYPE_FILTERS, ...LOCATION_FILTERS, ...BEHAVIOR_FILTERS, ...BIOME_FILTERS]);
+      const remaining = FILTER_OPTIONS.filter(f => !categorized.has(f));
+      if (remaining.length > 0) {
+        optionsRoot.appendChild(createSection("Other", remaining));
+      }
     }
 
     function setAll(checked) {
@@ -187,6 +250,28 @@
     saveButton.addEventListener("click", save);
 
     render();
+
+    const DARK_MODE_KEY = "memory_mode_dark_mode_enabled";
+
+    function readDarkModeEnabled() {
+      try {
+        const raw = localStorage.getItem(DARK_MODE_KEY);
+        if (raw === null) return false;
+        return raw === "true";
+      } catch {
+        return false;
+      }
+    }
+
+    function applyDarkMode() {
+      if (readDarkModeEnabled()) {
+        document.body.classList.add("dark-mode");
+      } else {
+        document.body.classList.remove("dark-mode");
+      }
+    }
+
+    applyDarkMode();
   </script>
 </body>
 </html>
